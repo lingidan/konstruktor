@@ -5877,11 +5877,11 @@ function rpInitResizeHandles() {
     -1  // инвертируем: тянем вправо → Sidebar уменьшается
   );
 
-  // Right handle (Sidebar | handle | RoomList): right drag → RoomList grows, Sidebar shrinks
+  // Right handle (Sidebar | handle | RoomList): right drag → RoomList shrinks, Sidebar grows
   setupHandle('rpResizeHandleR',
     () => document.getElementById('rpRoomList'),
     () => document.getElementById('roomPickerSidebar'),
-    +1
+    -1
   );
 }
 
