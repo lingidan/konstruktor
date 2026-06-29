@@ -981,7 +981,7 @@
   }
   #rpRoomListItems { overflow-y: auto; flex: 1; }
   .rp-list-item {
-    padding: 5px 10px; font-size: 11px; font-family: monospace; cursor: pointer;
+    padding: 5px 10px; font-size: 13px; font-family: monospace; cursor: pointer;
     border-bottom: 1px solid var(--border); color: var(--text); transition: background .1s; user-select: none;
   }
   .rp-list-item:hover { background: var(--navy); color: white; }
@@ -998,7 +998,7 @@
   .rp-floor-btn {
     display: block; width: 100%; text-align: left; padding: 7px 10px; margin-bottom: 3px;
     border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text);
-    cursor: pointer; font-size: 12px; font-weight: 500; transition: background .12s, border-color .12s;
+    cursor: pointer; font-size: 13px; font-weight: 500; transition: background .12s, border-color .12s;
   }
   .rp-floor-btn:hover { background: var(--accent-light); border-color: var(--navy); }
   .rp-floor-btn.active { background: var(--navy); color: white; border-color: var(--navy); font-weight: 700; }
@@ -5892,8 +5892,11 @@ function rpUpdateListFontSize() {
   const fs = Math.max(10, Math.min(16, Math.round(w / 13)));
   const search = document.getElementById('rpRoomListSearch');
   if (search) search.style.fontSize = fs + 'px';
-  document.getElementById('rpRoomListHeader').style.fontSize = Math.max(9, fs - 2) + 'px';
+  const header = document.getElementById('rpRoomListHeader');
+  if (header) header.style.fontSize = Math.max(9, fs - 2) + 'px';
   document.querySelectorAll('.rp-list-item').forEach(el => el.style.fontSize = fs + 'px');
+  // Синхронизируем шрифт кнопок отметок
+  document.querySelectorAll('.rp-floor-btn').forEach(el => el.style.fontSize = fs + 'px');
 }
 
 function rpToggleRoom(id, floor) {
