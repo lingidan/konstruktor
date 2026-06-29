@@ -960,14 +960,18 @@
   #roomPickerOverlaySVG .rp-room rect { fill: white; stroke: rgba(46,122,191,.7); stroke-width: 1.5; rx: 3; transition: fill .12s, stroke .12s; }
   #roomPickerOverlaySVG .rp-room:hover rect { fill: #dbeafe; stroke: rgba(46,122,191,1); }
   #roomPickerOverlaySVG .rp-room.selected rect { fill: #bbf7d0; stroke: rgba(22,163,74,1); stroke-width: 2; }
-  #roomPickerOverlaySVG .rp-room text { font-size: 9px; fill: #1e40af; font-family: monospace; pointer-events: none; font-weight: 600; }
+  #roomPickerOverlaySVG .rp-room text { font-size: 12px; fill: #1e40af; font-family: monospace; pointer-events: none; font-weight: 600; }
   #roomPickerOverlaySVG .rp-room.selected text { fill: #15803d; font-weight: 700; }
   #rpZoomControls { display:flex; align-items:center; gap:4px; }
   #rpZoomControls button { background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); color:white; border-radius:6px; width:28px; height:28px; font-size:16px; cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center; }
   #rpZoomControls button:hover { background:rgba(255,255,255,.3); }
   #rpZoomLabel { color:rgba(255,255,255,.8); font-size:12px; min-width:38px; text-align:center; }
+  .rp-resize-handle {
+    width: 5px; flex-shrink: 0; background: var(--border); cursor: col-resize; transition: background .15s; user-select: none;
+  }
+  .rp-resize-handle:hover, .rp-resize-handle.active { background: var(--accent); }
   #rpRoomList {
-    width: 120px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+    width: 160px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); border-right: 1px solid var(--border);
     display: flex; flex-direction: column; overflow: hidden;
   }
   #rpRoomListSearch {
@@ -5662,6 +5666,7 @@ function openRoomPicker() {
   _rpScale = 1;
   document.getElementById('roomPickerOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+  rpInitResizeHandles();
   rpSelectBuilding('20UKC');
 }
 
@@ -5758,7 +5763,7 @@ function rpBuildOverlay(floor, meta, wrap) {
   const resolvedPos = {};
   Object.entries(rooms).sort((a,b) => a[1].cy - b[1].cy || a[1].cx - b[1].cx).forEach(([id, pos]) => {
     const shortId = id.replace('20UKC', '');
-    const W = Math.max(shortId.length * 6.5 + 8, 70), H = 18;
+    const W = Math.max(shortId.length * 8 + 10, 80), H = 22;
     let x = pos.cx - W/2, y = pos.cy - H/2;
     for (let attempt = 0; attempt < 20; attempt++) {
       const col = placed.find(p => x < p.x2 && x+W > p.x1 && y < p.y2 && y+H > p.y1);
@@ -5814,7 +5819,7 @@ function rpRenderRoomList(filter) {
   ids.forEach(id => {
     const div = document.createElement('div');
     div.className = 'rp-list-item' + (_rpSelected.has(id) ? ' selected' : '');
-    div.textContent = id.replace('20UKC', '');
+    div.textContent = id;
     div.title = id;
     div.addEventListener('click', () => {
       rpToggleRoom(id, _rpRoomListFloor);
@@ -5829,6 +5834,63 @@ function rpRenderRoomList(filter) {
 
 function rpFilterRoomList(val) {
   rpRenderRoomList(val);
+}
+
+// ── Resize handles ───────────────────────────────────────────────────────────
+function rpInitResizeHandles() {
+  const setupHandle = (handleId, getTarget, getSibling) => {
+    const handle = document.getElementById(handleId);
+    if (!handle) return;
+    let startX, startW, startSibW;
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      startX   = e.clientX;
+      const target  = getTarget();
+      const sibling = getSibling();
+      startW    = target  ? target.offsetWidth  : 0;
+      startSibW = sibling ? sibling.offsetWidth : 0;
+      handle.classList.add('active');
+
+      const onMove = e => {
+        const dx = e.clientX - startX;
+        const target  = getTarget();
+        const sibling = getSibling();
+        if (target)  target.style.width  = Math.max(80, startW + dx) + 'px';
+        if (sibling) sibling.style.width = Math.max(80, startSibW - dx) + 'px';
+        rpUpdateListFontSize();
+      };
+      const onUp = () => {
+        handle.classList.remove('active');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  };
+
+  // Left handle: dragging changes SVGArea vs Sidebar
+  setupHandle('rpResizeHandleL',
+    () => document.getElementById('roomPickerSidebar'),
+    () => document.getElementById('roomPickerSVGArea')
+  );
+
+  // Right handle: dragging changes Sidebar vs RoomList
+  setupHandle('rpResizeHandleR',
+    () => document.getElementById('rpRoomList'),
+    () => document.getElementById('roomPickerSidebar')
+  );
+}
+
+function rpUpdateListFontSize() {
+  const list = document.getElementById('rpRoomList');
+  if (!list) return;
+  const w = list.offsetWidth;
+  const fs = Math.max(10, Math.min(16, Math.round(w / 13)));
+  const search = document.getElementById('rpRoomListSearch');
+  if (search) search.style.fontSize = fs + 'px';
+  document.getElementById('rpRoomListHeader').style.fontSize = Math.max(9, fs - 2) + 'px';
+  document.querySelectorAll('.rp-list-item').forEach(el => el.style.fontSize = fs + 'px');
 }
 
 function rpToggleRoom(id, floor) {
@@ -6179,6 +6241,7 @@ function copyDevEmail() {
         <div id="roomPickerLoader">Выберите отметку</div>
       </div>
     </div>
+    <div class="rp-resize-handle" id="rpResizeHandleL" title="Тянуть для изменения ширины"></div>
     <div id="roomPickerSidebar">
       <div id="roomPickerSidebarInner">
         <p class="rp-building-label">Здание</p>
@@ -6189,6 +6252,7 @@ function copyDevEmail() {
         <div id="rpFloorList"></div>
       </div>
     </div>
+    <div class="rp-resize-handle" id="rpResizeHandleR" title="Тянуть для изменения ширины"></div>
     <div id="rpRoomList">
       <div id="rpRoomListHeader">Помещения (<span id="rpRoomListCount">0</span>)</div>
       <input id="rpRoomListSearch" type="text" placeholder="Поиск…" oninput="rpFilterRoomList(this.value)">
