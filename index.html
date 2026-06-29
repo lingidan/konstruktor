@@ -5838,13 +5838,14 @@ function rpFilterRoomList(val) {
 
 // ── Resize handles ───────────────────────────────────────────────────────────
 function rpInitResizeHandles() {
-  const setupHandle = (handleId, getTarget, getSibling) => {
+  // sign: +1 = right drag grows target, -1 = right drag shrinks target
+  const setupHandle = (handleId, getTarget, getSibling, sign = 1) => {
     const handle = document.getElementById(handleId);
     if (!handle) return;
     let startX, startW, startSibW;
     handle.addEventListener('mousedown', e => {
       e.preventDefault();
-      startX   = e.clientX;
+      startX    = e.clientX;
       const target  = getTarget();
       const sibling = getSibling();
       startW    = target  ? target.offsetWidth  : 0;
@@ -5852,7 +5853,7 @@ function rpInitResizeHandles() {
       handle.classList.add('active');
 
       const onMove = e => {
-        const dx = e.clientX - startX;
+        const dx = (e.clientX - startX) * sign;
         const target  = getTarget();
         const sibling = getSibling();
         if (target)  target.style.width  = Math.max(80, startW + dx) + 'px';
@@ -5869,16 +5870,18 @@ function rpInitResizeHandles() {
     });
   };
 
-  // Left handle: dragging changes SVGArea vs Sidebar
+  // Left handle (SVGArea | handle | Sidebar): right drag → Sidebar grows, SVGArea shrinks
   setupHandle('rpResizeHandleL',
     () => document.getElementById('roomPickerSidebar'),
-    () => document.getElementById('roomPickerSVGArea')
+    () => document.getElementById('roomPickerSVGArea'),
+    -1  // инвертируем: тянем вправо → Sidebar уменьшается
   );
 
-  // Right handle: dragging changes Sidebar vs RoomList
+  // Right handle (Sidebar | handle | RoomList): right drag → RoomList grows, Sidebar shrinks
   setupHandle('rpResizeHandleR',
     () => document.getElementById('rpRoomList'),
-    () => document.getElementById('roomPickerSidebar')
+    () => document.getElementById('roomPickerSidebar'),
+    +1
   );
 }
 
