@@ -947,8 +947,7 @@
     flex: 1; display: flex; overflow: hidden;
   }
   #roomPickerSVGArea {
-    flex: 1; overflow: auto; background: #1a2236; position: relative;
-    display: flex; align-items: flex-start; justify-content: flex-start;
+    flex: 1; overflow: auto; background: #1a2236;
   }
   #roomPickerSVGWrap {
     position: relative; display: inline-block; cursor: default; background: white;
@@ -6180,11 +6179,6 @@ function copyDevEmail() {
         <div id="roomPickerLoader">Выберите отметку</div>
       </div>
     </div>
-    <div id="rpRoomList">
-      <div id="rpRoomListHeader">Помещения (<span id="rpRoomListCount">0</span>)</div>
-      <input id="rpRoomListSearch" type="text" placeholder="Поиск…" oninput="rpFilterRoomList(this.value)">
-      <div id="rpRoomListItems"></div>
-    </div>
     <div id="roomPickerSidebar">
       <div id="roomPickerSidebarInner">
         <p class="rp-building-label">Здание</p>
@@ -6194,6 +6188,11 @@ function copyDevEmail() {
         <p class="rp-building-label">Отметка</p>
         <div id="rpFloorList"></div>
       </div>
+    </div>
+    <div id="rpRoomList">
+      <div id="rpRoomListHeader">Помещения (<span id="rpRoomListCount">0</span>)</div>
+      <input id="rpRoomListSearch" type="text" placeholder="Поиск…" oninput="rpFilterRoomList(this.value)">
+      <div id="rpRoomListItems"></div>
     </div>
   </div>
   <div id="roomPickerBottom">
