@@ -1474,7 +1474,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.74</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.76</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3541,7 +3541,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v2.74';
+const CURRENT_VERSION = 'v2.76';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -4933,6 +4933,19 @@ async function buildOgnevoyDocument(data) {
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
   {
+    version: 'v2.76', date: '30.06.2026',
+    changes: [
+      'Список помещений в пикере загружается из основной таблицы Google Sheets (лист «Место и работа»)',
+    ]
+  },
+  {
+    version: 'v2.75', date: '30.06.2026',
+    changes: [
+      'Пикер помещений переработан: вместо плана здания — всплывающий список с фильтрами по зданию и отметке и поиском',
+      'План здания временно скрыт (правовой статус публикации уточняется)',
+    ]
+  },
+  {
     version: 'v2.74', date: '30.06.2026',
     changes: [
       'Кнопки «Отменить» и «Вернуть» в шапке (Ctrl+Z / Ctrl+Y)',
@@ -6023,17 +6036,108 @@ function rpApplyZoom() {
 }
 
 function openRoomPicker() {
-  if (!currentUser) {
-    openLoginModal();
-    return;
+  if (!currentUser) { openLoginModal(); return; }
+  openRoomListPopup();
+}
+
+/* ── Room List Popup JS ── */
+// Данные загружаются из листа «Место и работа» в MASTER_SHEET_ID (колонки: A=Объект, B=Отметка, C=Помещение)
+let _rlpRooms = null; // кэш {здание: {отметка: [помещения]}}
+let _rlpSelected = new Set();
+
+async function _rlpLoadRooms() {
+  if (_rlpRooms) return _rlpRooms;
+  const url = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=%D0%9C%D0%B5%D1%81%D1%82%D0%BE%20%D0%B8%20%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%B0`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error('Не удалось загрузить список помещений');
+  const csv = await resp.text();
+  const rows = _parseSheetCSV(csv).slice(1); // пропускаем строку заголовков
+  const result = {};
+  for (const row of rows) {
+    const bld = (row[0] || '').trim();
+    const floor = (row[1] || '').trim();
+    const room = (row[2] || '').trim();
+    if (!bld || !floor || !room) continue;
+    if (bld.startsWith('#') || floor.startsWith('#') || room.startsWith('#')) continue;
+    if (!result[bld]) result[bld] = {};
+    if (!result[bld][floor]) result[bld][floor] = [];
+    result[bld][floor].push(room);
   }
-  _rpSelected = new Map();
-  _rpFloor = null;
-  _rpScale = 1;
-  document.getElementById('roomPickerOverlay').classList.add('open');
+  _rlpRooms = result;
+  return result;
+}
+
+async function openRoomListPopup() {
+  _rlpSelected = new Set();
+  document.getElementById('roomListPopup').style.display = 'block';
   document.body.style.overflow = 'hidden';
-  rpInitResizeHandles();
-  rpSelectBuilding('20UKC');
+  document.getElementById('rlpList').innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:12px">Загрузка…</div>';
+
+  try {
+    const rooms = await _rlpLoadRooms();
+    const bldSel = document.getElementById('rlpBuilding');
+    const buildings = Object.keys(rooms);
+    bldSel.innerHTML = buildings.map(b => `<option value="${b}">${b}</option>`).join('');
+    rlpFillFloors();
+  } catch(e) {
+    document.getElementById('rlpList').innerHTML = '<div style="padding:24px;text-align:center;color:#e53e3e;font-size:12px">Ошибка загрузки. Проверьте доступ к таблице.</div>';
+  }
+  document.getElementById('rlpSearch').value = '';
+}
+
+function rlpFillFloors() {
+  const bld = document.getElementById('rlpBuilding').value;
+  const floors = Object.keys((_rlpRooms && _rlpRooms[bld]) || {});
+  document.getElementById('rlpFloor').innerHTML = floors.map(f => `<option value="${f}">${f}</option>`).join('');
+  rlpUpdate();
+}
+
+function closeRoomListPopup() {
+  document.getElementById('roomListPopup').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function rlpUpdate() {
+  const bld = document.getElementById('rlpBuilding').value;
+  const floor = document.getElementById('rlpFloor').value;
+  const q = document.getElementById('rlpSearch').value.trim().toLowerCase();
+  let rooms = (_rlpRooms && _rlpRooms[bld] && _rlpRooms[bld][floor]) ? [..._rlpRooms[bld][floor]] : [];
+  if (q) rooms = rooms.filter(r => r.toLowerCase().includes(q));
+  const list = document.getElementById('rlpList');
+  if (!rooms.length) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--gray-400);font-size:12px">Ничего не найдено</div>';
+  } else {
+    list.innerHTML = rooms.map(r => {
+      const sel = _rlpSelected.has(r);
+      return `<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:12px;${sel?'background:var(--accent-light);color:var(--accent);font-weight:600':''}">
+        <input type="checkbox" value="${r}" ${sel?'checked':''} onchange="rlpToggle(this)" style="accent-color:var(--accent)">
+        ${r}
+      </label>`;
+    }).join('');
+  }
+  rlpSyncCount();
+}
+
+function rlpToggle(cb) {
+  if (cb.checked) _rlpSelected.add(cb.value);
+  else _rlpSelected.delete(cb.value);
+  rlpUpdate();
+}
+
+function rlpSyncCount() {
+  const n = _rlpSelected.size;
+  document.getElementById('rlpCount').textContent = 'Выбрано: ' + n;
+  const btn = document.getElementById('rlpSaveBtn');
+  btn.disabled = n === 0;
+  btn.style.opacity = n > 0 ? '1' : '.5';
+}
+
+function saveRoomListPopup() {
+  if (!_rlpSelected.size) return;
+  const text = [..._rlpSelected].join(', ');
+  const el = document.getElementById('mesto');
+  if (el) { el.value = text; el.dispatchEvent(new Event('input')); }
+  closeRoomListPopup();
 }
 
 function closeRoomPicker() {
@@ -6644,8 +6748,25 @@ function copyDevEmail() {
   <div id="mapPickerStatus">Наведите на здание для просмотра информации</div>
 </div>
 
+<!--
+  ══════════════════════════════════════════════════════════════════════
+  ROOM PICKER MODAL (ПЛАН ЗДАНИЯ) — ВРЕМЕННО СКРЫТ (v2.75, 30.06.2026)
+  ══════════════════════════════════════════════════════════════════════
+  Причина: публикация поэтажных планов здания в открытом доступе может
+  нарушать режим конфиденциальности объекта. До выяснения правового
+  статуса — модалка скрыта, кнопка «Выбрать помещения» открывает
+  вместо неё новый popup-список (id="roomListPopup").
+
+  КАК ВЕРНУТЬ:
+  1. Убери style="display:none" у div#roomPickerOverlay ниже.
+  2. В функции openRoomPicker() раскомментируй оригинальный код
+     (он помечен "ОРИГИНАЛ") и удали вызов openRoomListPopup().
+  3. Весь остальной JS (rpSelectBuilding, rpLoadFloor и т.д.) уже на
+     месте и работает — ничего восстанавливать не нужно.
+  ══════════════════════════════════════════════════════════════════════
+-->
 <!-- ── Room Picker Modal ── -->
-<div id="roomPickerOverlay">
+<div id="roomPickerOverlay" style="display:none">
   <div id="roomPickerHeader">
     <div>
       <h3>Выбор помещений — <span id="rpBuildingTitle">20UKC</span></h3>
@@ -6691,6 +6812,32 @@ function copyDevEmail() {
       <button id="roomPickerSaveBtn" onclick="saveRoomPicker()" disabled>Сохранить</button>
     </div>
     <div id="roomPickerPreviewText">—</div>
+  </div>
+</div>
+
+<!-- ── Room List Popup (новый пикер помещений без плана) ── -->
+<div id="roomListPopup" style="display:none;position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.5)" onclick="if(event.target===this)closeRoomListPopup()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-card);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.35);width:420px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:var(--navy);color:white;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <span style="font-weight:700;font-size:14px">Выбор помещений</span>
+      <button onclick="closeRoomListPopup()" style="background:rgba(255,255,255,.15);border:none;color:white;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1">✕</button>
+    </div>
+    <div style="padding:12px 14px;display:flex;gap:8px;flex-shrink:0;border-bottom:1px solid var(--border)">
+      <select id="rlpBuilding" onchange="rlpFillFloors()" style="flex:0 0 auto;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg-card);color:var(--text)">
+        <option value="20UKC">20UKC</option>
+      </select>
+      <select id="rlpFloor" onchange="rlpUpdate()" style="flex:0 0 auto;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg-card);color:var(--text)">
+      </select>
+      <input id="rlpSearch" type="text" placeholder="Поиск помещения…" oninput="rlpUpdate()" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg-card);color:var(--text)">
+    </div>
+    <div id="rlpList" style="overflow-y:auto;flex:1;padding:8px 6px"></div>
+    <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px">
+      <span id="rlpCount" style="font-size:12px;color:var(--gray-400)">Выбрано: 0</span>
+      <div style="display:flex;gap:8px">
+        <button onclick="closeRoomListPopup()" style="border:1px solid var(--border);background:transparent;color:var(--text);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px">Отмена</button>
+        <button id="rlpSaveBtn" onclick="saveRoomListPopup()" disabled style="background:var(--accent);color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600;opacity:.5">Применить</button>
+      </div>
+    </div>
   </div>
 </div>
 
