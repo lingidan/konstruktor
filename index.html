@@ -1482,7 +1482,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.84</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.85</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3570,7 +3570,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v2.84';
+const CURRENT_VERSION = 'v2.85';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -4195,8 +4195,6 @@ let _saveTimer;
 function scheduleSave() {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(saveFormData, 600);
-  const hint = document.getElementById('dlShareHint');
-  if (hint) hint.classList.remove('visible');
 }
 
 // ─── Цветовые темы ────────────────────────────────────────────────────────
@@ -4989,6 +4987,12 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v2.85', date: '30.06.2026',
+    changes: [
+      'Баннер «Нравится сайт?» появляется после скачивания и пропадает только при перезагрузке страницы',
+    ]
+  },
   {
     version: 'v2.84', date: '30.06.2026',
     changes: [
