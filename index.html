@@ -224,6 +224,14 @@
     display: flex; align-items: center; gap: 6px;
   }
 
+  #dlShareHint {
+    display: none; margin: 10px 22px 4px; padding: 10px 16px;
+    background: var(--accent-light); border: 1px solid var(--accent);
+    border-radius: 8px; color: var(--accent); font-size: 13px;
+    text-align: center; font-weight: 500;
+  }
+  #dlShareHint.visible { display: block; }
+
   #dlPlaceholder {
     padding: 22px; text-align: center; color: var(--gray-400);
     font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -1474,7 +1482,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.78</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.84</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1782,6 +1790,7 @@
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         Файлы генерируются локально в браузере — данные не передаются на сервер.
       </div>
+      <div id="dlShareHint"> Нравится сайт? Расскажи коллегам!</div>
     </div>
 
     <div id="dlPlaceholder">
@@ -2743,11 +2752,9 @@ document.addEventListener('click', e => {
 function loadOrgPersonnel() {
   if (!currentUser) return;
   const org = currentUser.org;
+  const _ssKey = 'session_personnel_' + org;
 
-  const sheetUrl = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(org)}`;
-  fetch(sheetUrl)
-    .then(r => { if (!r.ok) throw new Error(); return r.text(); })
-    .then(csv => {
+  const _doLoad = csv => {
       const rows = _parseSheetCSV(csv);
       if (rows.length < 2) return;
       const hdrs = rows[0].map(h => (h || '').toLowerCase());
@@ -2833,6 +2840,20 @@ function loadOrgPersonnel() {
       } catch(e) {}
       syncEnabled = true;
       syncAllRows();
+  };
+
+  const _cachedCsv = sessionStorage.getItem(_ssKey);
+  if (_cachedCsv) {
+    _doLoad(_cachedCsv);
+    return;
+  }
+
+  const sheetUrl = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(org)}`;
+  fetch(sheetUrl)
+    .then(r => { if (!r.ok) throw new Error(); return r.text(); })
+    .then(csv => {
+      try { sessionStorage.setItem(_ssKey, csv); } catch(e) {}
+      _doLoad(csv);
     })
     .catch(() => console.warn('Не удалось загрузить сотрудников организации:', org));
 }
@@ -3549,7 +3570,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v2.78';
+const CURRENT_VERSION = 'v2.84';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -3588,6 +3609,16 @@ async function ensureActualVersion() {
   }
 }
 
+function _refreshPersonnelCache() {
+  for (const key of Object.keys(sessionStorage)) {
+    if (key.startsWith('session_personnel_') || key === 'session_rooms') {
+      sessionStorage.removeItem(key);
+    }
+  }
+  _rlpRooms = null;
+  if (currentUser) loadOrgPersonnel();
+}
+
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -3598,6 +3629,9 @@ function downloadBlob(blob, filename) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   trackDocGenerated();
+  const hint = document.getElementById('dlShareHint');
+  if (hint) hint.classList.add('visible');
+  _refreshPersonnelCache();
 }
 
 function trackDocGenerated() {
@@ -4161,6 +4195,8 @@ let _saveTimer;
 function scheduleSave() {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(saveFormData, 600);
+  const hint = document.getElementById('dlShareHint');
+  if (hint) hint.classList.remove('visible');
 }
 
 // ─── Цветовые темы ────────────────────────────────────────────────────────
@@ -4581,6 +4617,7 @@ async function downloadKarta(btn) {
     a.download = 'Карта ОПФ к наряду №' + (data.nomer || '____') + '.docx';
     a.click();
     URL.revokeObjectURL(a.href);
+    _refreshPersonnelCache();
   } catch(e) {
     alert('Ошибка: ' + e.message);
   } finally {
@@ -4693,9 +4730,12 @@ async function buildOgnevoyDocument(data) {
 
   const dateStr = formatRuDate(data.dateStart);
   const dateEndStr = formatRuDate(data.dateEnd);
+  const dateDMY = (() => { if (!data.dateStart) return ''; const d = new Date(data.dateStart); return [String(d.getDate()).padStart(2,'0'), String(d.getMonth()+1).padStart(2,'0'), d.getFullYear()].join('.'); })();
   const nomerOgn = data.nomerOgn || '____';
   const rukov = data.rukov || '____________________';
   const naradVydal = data.naradVydal || '____________________';
+  const naradVydalDolzh = data.naradVydalDolzh || '';
+  const naradVydalShortFio = toInitials(data.naradVydalFio || '');
   const org = data.org || '____________________';
   const sp40 = { after: 40, line: 200, lineRule: 'auto' };
 
@@ -4737,7 +4777,7 @@ async function buildOgnevoyDocument(data) {
         cell(ex.fio || '',   { width: W4[1] }),
         cell(ex.dolzh || '', { width: W4[2] }),
         cell('', { width: W4[3] }),
-        cell('', { width: W4[4] }),
+        cell(dateDMY, { width: W4[4], align: AlignmentType.CENTER }),
         cell('', { width: W4[5] }),
       ],
     })));
@@ -4834,7 +4874,14 @@ async function buildOgnevoyDocument(data) {
         // УТВЕРЖДАЮ
         p('УТВЕРЖДАЮ', { bold: true, size: 22, align: AlignmentType.RIGHT }),
         p(org, { align: AlignmentType.RIGHT }),
-        p('_________________', { align: AlignmentType.RIGHT }),
+        new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          spacing: { after: 0, line: 200, lineRule: 'auto' },
+          children: [
+            run('_____________  '),
+            run([naradVydalDolzh, naradVydalShortFio].filter(Boolean).join('  ') || '____________________'),
+          ],
+        }),
         p(dateStr, { align: AlignmentType.RIGHT }),
         hint('руководитель или лицо, ответственное за пожарную безопасность, должность, ф.и.о.', { align: AlignmentType.RIGHT }),
 
@@ -4853,7 +4900,9 @@ async function buildOgnevoyDocument(data) {
 
         // П.3
         sectionTitle('3', 'Место проведения работ:'),
-        p(data.mesto || '', { spacing: sp40, borderBottom: true }),
+        ...(data.mesto || '').split('\n').map((line, i, arr) =>
+          p(line, i < arr.length - 1 ? { spacing: sp40 } : { spacing: sp40, borderBottom: true })
+        ),
         hint('отделение, участок, здание, отметка, помещение'),
 
         // П.4
@@ -4940,6 +4989,45 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v2.84', date: '30.06.2026',
+    changes: [
+      'База сотрудников и помещений обновляется при каждом F5 и после скачивания любого документа',
+    ]
+  },
+  {
+    version: 'v2.83', date: '30.06.2026',
+    changes: [
+      'Пикер помещений: в поле «Место выполнения работ» отметка теперь пишется перед помещениями, каждая отметка — с новой строки',
+    ]
+  },
+  {
+    version: 'v2.82', date: '30.06.2026',
+    changes: [
+      'База сотрудников и список помещений кешируются на время сессии — при F5 не перезагружаются из сети',
+    ]
+  },
+  {
+    version: 'v2.81', date: '30.06.2026',
+    changes: [
+      'В огневом наряде: подпись в блоке «УТВЕРЖДАЮ» оформлена строчкой слева от должности и ФИО',
+      'Дата в таблице исполнителей огневого наряда в формате дд.мм.гггг',
+    ]
+  },
+  {
+    version: 'v2.80', date: '30.06.2026',
+    changes: [
+      'В огневом наряде: в блоке «УТВЕРЖДАЮ» добавлены должность и фамилия с инициалами выдающего наряд',
+      'В таблице состава исполнителей огневого наряда автоматически проставляется дата выдачи',
+    ]
+  },
+  {
+    version: 'v2.79', date: '30.06.2026',
+    changes: [
+      'После скачивания документа появляется подсказка «Нравится сайт? Расскажи коллегам!», исчезающая при редактировании бланка',
+      'Журнал обновлений теперь показывает не более 15 последних версий',
+    ]
+  },
   {
     version: 'v2.78', date: '30.06.2026',
     changes: [
@@ -5244,7 +5332,7 @@ function toggleChangelog() {
 
 function renderChangelog() {
   const list = document.getElementById('changelogList');
-  list.innerHTML = CHANGELOG.map(entry => `
+  list.innerHTML = CHANGELOG.slice(0, 15).map(entry => `
     <div class="cl-entry">
       <div class="cl-ver-row">
         <span class="cl-ver">${entry.version}</span>
@@ -6064,32 +6152,42 @@ function openRoomPicker() {
 /* ── Room List Popup JS ── */
 // Данные загружаются из листа «Место и работа» в MASTER_SHEET_ID (колонки: A=Объект, B=Отметка, C=Помещение)
 let _rlpRooms = null; // кэш {здание: {отметка: [помещения]}}
-let _rlpSelected = new Set();
+let _rlpSelected = new Map();
 
 async function _rlpLoadRooms() {
   if (_rlpRooms) return _rlpRooms;
+  const _ssKey = 'session_rooms';
+  const _parseCsv = csv => {
+    const rows = _parseSheetCSV(csv).slice(1);
+    const result = {};
+    for (const row of rows) {
+      const bld = (row[0] || '').trim();
+      const floor = (row[1] || '').trim();
+      const room = (row[2] || '').trim();
+      if (!bld || !floor || !room) continue;
+      if (bld.startsWith('#') || floor.startsWith('#') || room.startsWith('#')) continue;
+      if (!result[bld]) result[bld] = {};
+      if (!result[bld][floor]) result[bld][floor] = [];
+      result[bld][floor].push(room);
+    }
+    return result;
+  };
+  const _cachedCsv = sessionStorage.getItem(_ssKey);
+  if (_cachedCsv) {
+    _rlpRooms = _parseCsv(_cachedCsv);
+    return _rlpRooms;
+  }
   const url = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=%D0%9C%D0%B5%D1%81%D1%82%D0%BE%20%D0%B8%20%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%B0`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error('Не удалось загрузить список помещений');
   const csv = await resp.text();
-  const rows = _parseSheetCSV(csv).slice(1); // пропускаем строку заголовков
-  const result = {};
-  for (const row of rows) {
-    const bld = (row[0] || '').trim();
-    const floor = (row[1] || '').trim();
-    const room = (row[2] || '').trim();
-    if (!bld || !floor || !room) continue;
-    if (bld.startsWith('#') || floor.startsWith('#') || room.startsWith('#')) continue;
-    if (!result[bld]) result[bld] = {};
-    if (!result[bld][floor]) result[bld][floor] = [];
-    result[bld][floor].push(room);
-  }
-  _rlpRooms = result;
-  return result;
+  try { sessionStorage.setItem(_ssKey, csv); } catch(e) {}
+  _rlpRooms = _parseCsv(csv);
+  return _rlpRooms;
 }
 
 async function openRoomListPopup() {
-  _rlpSelected = new Set();
+  _rlpSelected = new Map();
   document.getElementById('roomListPopup').style.display = 'block';
   document.body.style.overflow = 'hidden';
   document.getElementById('rlpList').innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:12px">Загрузка…</div>';
@@ -6129,9 +6227,10 @@ function rlpUpdate() {
     list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--gray-400);font-size:12px">Ничего не найдено</div>';
   } else {
     list.innerHTML = rooms.map(r => {
-      const sel = _rlpSelected.has(r);
+      const key = floor + '||' + r;
+      const sel = _rlpSelected.has(key);
       return `<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:12px;${sel?'background:var(--accent-light);color:var(--accent);font-weight:600':''}">
-        <input type="checkbox" value="${r}" ${sel?'checked':''} onchange="rlpToggle(this)" style="accent-color:var(--accent)">
+        <input type="checkbox" value="${key}" ${sel?'checked':''} onchange="rlpToggle(this)" style="accent-color:var(--accent)">
         ${r}
       </label>`;
     }).join('');
@@ -6140,8 +6239,12 @@ function rlpUpdate() {
 }
 
 function rlpToggle(cb) {
-  if (cb.checked) _rlpSelected.add(cb.value);
-  else _rlpSelected.delete(cb.value);
+  if (cb.checked) {
+    const [floor, room] = cb.value.split('||');
+    _rlpSelected.set(cb.value, { floor, room });
+  } else {
+    _rlpSelected.delete(cb.value);
+  }
   rlpUpdate();
 }
 
@@ -6155,7 +6258,15 @@ function rlpSyncCount() {
 
 function saveRoomListPopup() {
   if (!_rlpSelected.size) return;
-  const text = [..._rlpSelected].join(', ');
+  // Группируем по отметке, сохраняя порядок первого появления
+  const byFloor = new Map();
+  for (const { floor, room } of _rlpSelected.values()) {
+    if (!byFloor.has(floor)) byFloor.set(floor, []);
+    byFloor.get(floor).push(room);
+  }
+  const text = [...byFloor.entries()]
+    .map(([floor, rooms]) => floor + ': ' + rooms.join(', '))
+    .join('\n');
   const el = document.getElementById('mesto');
   if (el) { el.value = text; el.dispatchEvent(new Event('input')); }
   closeRoomListPopup();
@@ -6487,6 +6598,15 @@ document.addEventListener('wheel', e => {
 })();
 
 // ─── Init ─────────────────────────────────────────────────────────────────
+// Сбрасываем кеш базы данных при каждой загрузке страницы
+(function() {
+  for (const key of Object.keys(sessionStorage)) {
+    if (key.startsWith('session_personnel_') || key === 'session_rooms') {
+      sessionStorage.removeItem(key);
+    }
+  }
+})();
+
 // Восстанавливаем сессию авторизации
 (function() {
   const saved = localStorage.getItem('auth_user');
