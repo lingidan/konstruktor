@@ -1350,7 +1350,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.68</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.71</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3230,6 +3230,23 @@ async function buildPPRVDocument(data) {
   function subHeaderRow(text) {
     return new TableRow({ children: [ cell(text, { width: CONTENT_W, span: 2, bold: true }) ] });
   }
+  function infoRowWithSig(label, value, sigDolzh) {
+    const sigLine = new Paragraph({
+      spacing: { before: 120, after: 20 },
+      children: [
+        new TextRun({ text: 'Подпись ', font: FONT, size: 22 }),
+        new TextRun({ text: '______________________________', font: FONT, size: 22 }),
+      ]
+    });
+    const valueParas = [
+      p([sigDolzh, value].filter(Boolean).join(' ') || '', { spacing: { after: 20 } }),
+      sigLine
+    ];
+    return new TableRow({ children: [
+      cell(label, { width: colLabel, bold: true }),
+      cell(valueParas, { width: colValue })
+    ] });
+  }
   function rescueRow(situation, response) {
     return new TableRow({ children: [
       cell(situation, { width: colLabel }),
@@ -3238,6 +3255,7 @@ async function buildPPRVDocument(data) {
   }
 
   const execLead = (data.executors[0] && data.executors[0].fio) || '';
+  const execLeadDolzh = (data.executors[0] && data.executors[0].dolzh) || '';
   const hasWelder = data.executors.some(e => /электрогазосварщик|электросварщик/i.test(e.dolzh || ''));
   const privyaz = hasWelder
     ? 'Страховочная привязь «Safe-Tec-St-5», Страховочная привязь «Safe-Tec-St-5 Огнеупорная»'
@@ -3285,9 +3303,9 @@ async function buildPPRVDocument(data) {
       infoRow('Применение технических средств безопасности и первичных средств пожаротушения:', '2 огнетушителя ОП-5, огнеупорное полотно (установленных на рабочем месте)'),
       infoRow('Санитарно-бытовое обслуживание работников:', 'Аптечка первой помощи находится на рабочем месте'),
       infoRow('Дополнительные мероприятия, выполняемые при совмещенных работах, при работах в условиях действующего производства:', 'отсутствуют'),
-      infoRow('Лицо, выдающее наряд-допуск:', data.naradVydal),
-      infoRow('Руководитель работ:', data.rukov),
-      infoRow('Исполнитель работ:', execLead)
+      infoRowWithSig('Лицо, выдающее наряд-допуск:', [data.naradVydalDolzh, toInitials(data.naradVydalFio)].filter(Boolean).join(' ')),
+      infoRowWithSig('Руководитель работ:', [data.rukovDolzh, toInitials(data.rukovFio)].filter(Boolean).join(' ')),
+      infoRowWithSig('Исполнитель работ:', toInitials(execLead), execLeadDolzh)
     ]
   });
 
@@ -3385,7 +3403,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v2.68';
+const CURRENT_VERSION = 'v2.71';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -3437,8 +3455,8 @@ function downloadBlob(blob, filename) {
 }
 
 function trackDocGenerated() {
-  if (!currentUser || !currentUser.login) return;
-  const params = new URLSearchParams({ action: 'trackDocs', login: currentUser.login, count: 1 });
+  const login = (currentUser && currentUser.login) ? currentUser.login : 'anonymous';
+  const params = new URLSearchParams({ action: 'trackDocs', login, count: 1 });
   fetch(REG_SCRIPT_URL + '?' + params.toString()).catch(() => {});
 }
 
@@ -3818,9 +3836,58 @@ const TEMPLATE_STATIC_DATA = {
 };
 
 function applyTemplateData() {
-  orgDangers    = TEMPLATE_FACTORS.map(f => ({ ...f }));
-  orgStaticData = { p3: TEMPLATE_STATIC_DATA.p3, p4rows: [...TEMPLATE_STATIC_DATA.p4rows], p5rows: [...TEMPLATE_STATIC_DATA.p5rows] };
-  renderCustomCheckboxes();
+  const sheetUrl = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('Без регистрации')}`;
+  fetch(sheetUrl)
+    .then(r => { if (!r.ok) throw new Error(); return r.text(); })
+    .then(csv => {
+      const rows = _parseSheetCSV(csv);
+      if (rows.length < 2) throw new Error('empty');
+      const hdrs = rows[0].map(h => (h || '').toLowerCase());
+      const iName = hdrs.findIndex(h => h.includes('назван') || h.includes('опасн'));
+      if (iName >= 0) {
+        const seenNames = new Set();
+        orgDangers = [];
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          const name = (r[iName] || '').trim();
+          if (!name || seenNames.has(name)) continue;
+          seenNames.add(name);
+          orgDangers.push({
+            id:  'anonf_' + _simpleHash(name),
+            name,
+            p3:  (r[iName + 1] || '').trim() || null,
+            p4:  (r[iName + 2] || '').trim() || null,
+            p5:  (r[iName + 3] || '').trim() || null,
+          });
+        }
+      } else {
+        orgDangers = TEMPLATE_FACTORS.map(f => ({ ...f }));
+      }
+      const iP3St = hdrs.findIndex(h => h.includes('неизменн') && (h.includes('п.3') || h.includes('п3') || h.endsWith('3')));
+      const iP4St = hdrs.findIndex(h => h.includes('неизменн') && (h.includes('п.4') || h.includes('п4') || h.endsWith('4')));
+      const iP5St = hdrs.findIndex(h => h.includes('неизменн') && (h.includes('п.5') || h.includes('п5') || h.endsWith('5')));
+      orgStaticData = { p3: null, p4rows: [], p5rows: [] };
+      if (iP3St >= 0 || iP4St >= 0 || iP5St >= 0) {
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          const p3val = (iP3St >= 0 ? r[iP3St] : '').trim();
+          const p4val = (iP4St >= 0 ? r[iP4St] : '').trim();
+          const p5val = (iP5St >= 0 ? r[iP5St] : '').trim();
+          if (p3val && !orgStaticData.p3) orgStaticData.p3 = p3val;
+          if (p4val) orgStaticData.p4rows.push(p4val);
+          if (p5val) orgStaticData.p5rows.push(p5val);
+        }
+      }
+      if (!orgStaticData.p3 && !orgStaticData.p4rows.length) {
+        orgStaticData = { p3: TEMPLATE_STATIC_DATA.p3, p4rows: [...TEMPLATE_STATIC_DATA.p4rows], p5rows: [...TEMPLATE_STATIC_DATA.p5rows] };
+      }
+      renderCustomCheckboxes();
+    })
+    .catch(() => {
+      orgDangers    = TEMPLATE_FACTORS.map(f => ({ ...f }));
+      orgStaticData = { p3: TEMPLATE_STATIC_DATA.p3, p4rows: [...TEMPLATE_STATIC_DATA.p4rows], p5rows: [...TEMPLATE_STATIC_DATA.p5rows] };
+      renderCustomCheckboxes();
+    });
 }
 
 function _simpleHash(s) {
@@ -4604,6 +4671,25 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v2.71', date: '30.06.2026',
+    changes: [
+      'В ППРв под строками выдающего наряд, руководителя и исполнителя добавлена строка для подписи (Должность / ФИО / Подпись)',
+      'Для исполнителя работ в ППРв автоматически подставляется его должность',
+    ]
+  },
+  {
+    version: 'v2.70', date: '30.06.2026',
+    changes: [
+      'Для пользователей без регистрации факторы опасностей и мероприятия п.3/4/5 загружаются из листа «Без регистрации» Google Sheets',
+    ]
+  },
+  {
+    version: 'v2.69', date: '30.06.2026',
+    changes: [
+      'Счётчик нарядов для анонимных пользователей (Без регистрации) теперь работает',
+    ]
+  },
   {
     version: 'v2.68', date: '29.06.2026',
     changes: [
