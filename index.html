@@ -947,8 +947,9 @@
     flex: 1; display: flex; overflow: hidden;
   }
   #roomPickerSVGArea {
-    flex: 1; overflow: auto; background: #1a2236;
+    flex: 1; overflow: auto; background: #1a2236; cursor: grab;
   }
+  #roomPickerSVGArea.rp-panning { cursor: grabbing; }
   #roomPickerSVGWrap {
     position: relative; display: inline-block; cursor: default; background: white;
     transform-origin: top left; transition: transform .1s;
@@ -1350,7 +1351,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.71</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.73</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1509,7 +1510,7 @@
         <div class="field col-span-2">
           <label>Место выполнения работ <span class="req">*</span></label>
           <div style="display:flex;gap:6px;align-items:stretch">
-            <input type="text" id="mesto" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0">
+            <textarea id="mesto" rows="3" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0;resize:vertical;font-family:inherit;font-size:inherit;padding:5px 8px;box-sizing:border-box"></textarea>
             <!-- кнопка Схема временно скрыта -->
             <button type="button" onclick="openMapPicker()" title="Открыть схему площадки" style="display:none">Схема</button>
             <button type="button" onclick="openRoomPicker()" title="Выбрать помещения на плане"
@@ -2948,7 +2949,7 @@ async function buildNaryadDocument(data) {
       ] }),
       new TableRow({ children: [
         cell('2. На выполнение работ на Курской АЭС-2:', { width: colLabel, bold: true, noBorder: true }),
-        cell([data.vidRabot, data.mesto].filter(Boolean).join(', '), { width: colValue, ulBorder: true })
+        cell([data.vidRabot, data.mesto].filter(Boolean).join('\n'), { width: colValue, ulBorder: true })
       ] }),
       new TableRow({ children: [
         cell('', { width: colLabel, noBorder: true }),
@@ -3403,7 +3404,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v2.71';
+const CURRENT_VERSION = 'v2.73';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -4671,6 +4672,19 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v2.73', date: '30.06.2026',
+    changes: [
+      'В пикере помещений схему можно перетаскивать мышью (зажать и двигать по пустому месту)',
+      'Схема не уходит за левый край экрана',
+    ]
+  },
+  {
+    version: 'v2.72', date: '30.06.2026',
+    changes: [
+      'В наряде-допуске каждая отметка помещений выводится с новой строки (как в предварительном просмотре)',
+    ]
+  },
   {
     version: 'v2.71', date: '30.06.2026',
     changes: [
@@ -6035,6 +6049,51 @@ document.addEventListener('wheel', e => {
   e.preventDefault();
   rpZoom(e.deltaY < 0 ? 0.15 : -0.15);
 }, { passive: false });
+
+// ─── Drag-to-pan для схемы помещений ──────────────────────────────────────
+(function() {
+  let _panning = false, _startX = 0, _startY = 0, _scrollX = 0, _scrollY = 0;
+
+  function isRoomEl(el) {
+    return el && (el.closest('.rp-room') !== null);
+  }
+
+  document.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    const area = document.getElementById('roomPickerSVGArea');
+    if (!area || !area.contains(e.target)) return;
+    if (isRoomEl(e.target)) return;
+    _panning = true;
+    _startX = e.clientX;
+    _startY = e.clientY;
+    _scrollX = area.scrollLeft;
+    _scrollY = area.scrollTop;
+    area.classList.add('rp-panning');
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!_panning) return;
+    const area = document.getElementById('roomPickerSVGArea');
+    if (!area) return;
+    const dx = e.clientX - _startX;
+    const dy = e.clientY - _startY;
+    // ограничение слева: scrollLeft не может быть меньше 0 (браузер ограничивает сам,
+    // но явно не даём уйти в отрицательную зону)
+    area.scrollLeft = Math.max(0, _scrollX - dx);
+    area.scrollTop = Math.max(0, _scrollY - dy);
+  });
+
+  function stopPan() {
+    if (!_panning) return;
+    _panning = false;
+    const area = document.getElementById('roomPickerSVGArea');
+    if (area) area.classList.remove('rp-panning');
+  }
+
+  document.addEventListener('mouseup', stopPan);
+  document.addEventListener('mouseleave', stopPan);
+})();
 
 // ─── Init ─────────────────────────────────────────────────────────────────
 // Восстанавливаем сессию авторизации
