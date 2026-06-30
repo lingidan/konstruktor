@@ -6817,21 +6817,21 @@ function copyDevEmail() {
 
 <!-- ── Room List Popup (новый пикер помещений без плана) ── -->
 <div id="roomListPopup" style="display:none;position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.5)" onclick="if(event.target===this)closeRoomListPopup()">
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-card);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.35);width:420px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.35);width:440px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
     <div style="background:var(--navy);color:white;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <span style="font-weight:700;font-size:14px">Выбор помещений</span>
       <button onclick="closeRoomListPopup()" style="background:rgba(255,255,255,.15);border:none;color:white;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1">✕</button>
     </div>
-    <div style="padding:12px 14px;display:flex;gap:8px;flex-shrink:0;border-bottom:1px solid var(--border)">
-      <select id="rlpBuilding" onchange="rlpFillFloors()" style="flex:0 0 auto;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg-card);color:var(--text)">
+    <div style="padding:10px 14px;display:flex;gap:8px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg-page)">
+      <select id="rlpBuilding" onchange="rlpFillFloors()" style="flex:0 0 90px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface);color:var(--text)">
         <option value="20UKC">20UKC</option>
       </select>
-      <select id="rlpFloor" onchange="rlpUpdate()" style="flex:0 0 auto;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg-card);color:var(--text)">
+      <select id="rlpFloor" onchange="rlpUpdate()" style="flex:0 0 115px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface);color:var(--text)">
       </select>
-      <input id="rlpSearch" type="text" placeholder="Поиск помещения…" oninput="rlpUpdate()" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg-card);color:var(--text)">
+      <input id="rlpSearch" type="text" placeholder="Поиск…" oninput="rlpUpdate()" style="flex:1;min-width:0;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface);color:var(--text)">
     </div>
-    <div id="rlpList" style="overflow-y:auto;flex:1;padding:8px 6px"></div>
-    <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px">
+    <div id="rlpList" style="overflow-y:auto;flex:1;padding:8px 6px;background:var(--surface)"></div>
+    <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px;background:var(--surface)">
       <span id="rlpCount" style="font-size:12px;color:var(--gray-400)">Выбрано: 0</span>
       <div style="display:flex;gap:8px">
         <button onclick="closeRoomListPopup()" style="border:1px solid var(--border);background:transparent;color:var(--text);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px">Отмена</button>
