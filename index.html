@@ -1510,7 +1510,7 @@
         <div class="field col-span-2">
           <label>Место выполнения работ <span class="req">*</span></label>
           <div style="display:flex;gap:6px;align-items:stretch">
-            <textarea id="mesto" rows="3" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0;resize:vertical;font-family:inherit;font-size:inherit;padding:5px 8px;box-sizing:border-box"></textarea>
+            <textarea id="mesto" rows="3" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0;resize:vertical;font-family:inherit;font-size:14px;padding:9px 12px;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius);color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(46,122,191,.18)'" onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
             <!-- кнопка Схема временно скрыта -->
             <button type="button" onclick="openMapPicker()" title="Открыть схему площадки" style="display:none">Схема</button>
             <button type="button" onclick="openRoomPicker()" title="Выбрать помещения на плане"
