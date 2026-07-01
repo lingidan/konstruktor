@@ -1451,7 +1451,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.88</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.89</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2732,7 +2732,13 @@ function loadOrgPersonnel() {
   const _doLoad = csv => {
       const rows = _parseSheetCSV(csv);
       if (rows.length < 2) return;
-      const hdrs = rows[0].map(h => (h || '').toLowerCase());
+      // Ищем строку с заголовками — первую, где есть «фио» или «ф.и.о»
+      let hdrIdx = rows.findIndex(r => r.some(c => {
+        const v = (c || '').toLowerCase();
+        return v.includes('фио') || v.includes('ф.и.о');
+      }));
+      if (hdrIdx < 0) hdrIdx = 0;
+      const hdrs = rows[hdrIdx].map(h => (h || '').toLowerCase());
       const iFIO   = hdrs.findIndex(h => h.includes('фио') || h.includes('ф.и.о'));
       const iDolzh = hdrs.findIndex(h => h.includes('должн'));
       const iRazr  = hdrs.findIndex(h => h.includes('разряд') || h.includes('профессия'));
@@ -2744,7 +2750,7 @@ function loadOrgPersonnel() {
       employeeMap = {};
       issuersList = [];
       allEmployeesList = [];
-      for (let i = 1; i < rows.length; i++) {
+      for (let i = hdrIdx + 1; i < rows.length; i++) {
         const r = rows[i];
         const fio = ((iFIO >= 0 ? r[iFIO] : r[1]) || '').trim();
         if (!fio) continue;
@@ -3575,7 +3581,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v2.88';
+const CURRENT_VERSION = 'v2.89';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -4994,6 +5000,12 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v2.89', date: '01.07.2026',
+    changes: [
+      'Исправлено чтение заголовков таблицы — строка с названиями колонок теперь ищется автоматически, многострочная шапка не ломает парсинг',
+    ]
+  },
   {
     version: 'v2.88', date: '01.07.2026',
     changes: [
