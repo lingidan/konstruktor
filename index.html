@@ -1451,7 +1451,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.93</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.94</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3572,7 +3572,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v2.93';
+const CURRENT_VERSION = 'v2.94';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -3617,7 +3617,6 @@ function _refreshPersonnelCache() {
       sessionStorage.removeItem(key);
     }
   }
-  _rlpRooms = null;
   if (currentUser) loadOrgPersonnel();
 }
 
@@ -4992,6 +4991,12 @@ async function buildOgnevoyDocument(data) {
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
   {
+    version: 'v2.94', date: '01.07.2026',
+    changes: [
+      'Исправлен пикер помещений — этажи и помещения теперь отображаются корректно',
+    ]
+  },
+  {
     version: 'v2.93', date: '01.07.2026',
     changes: [
       'Упрощён парсинг таблиц организаций — одна строка заголовков вместо многострочной шапки',
@@ -6199,7 +6204,7 @@ function openRoomListPopup() {
 
 function rlpFillFloors() {
   const bld = document.getElementById('rlpBuilding').value;
-  const floors = Object.keys((_rlpRooms && _rlpRooms[bld]) || {});
+  const floors = Object.keys((orgRooms && orgRooms[bld]) || {});
   document.getElementById('rlpFloor').innerHTML = floors.map(f => `<option value="${f}">${f}</option>`).join('');
   rlpUpdate();
 }
@@ -6213,7 +6218,7 @@ function rlpUpdate() {
   const bld = document.getElementById('rlpBuilding').value;
   const floor = document.getElementById('rlpFloor').value;
   const q = document.getElementById('rlpSearch').value.trim().toLowerCase();
-  let rooms = (_rlpRooms && _rlpRooms[bld] && _rlpRooms[bld][floor]) ? [..._rlpRooms[bld][floor]] : [];
+  let rooms = (orgRooms && orgRooms[bld] && orgRooms[bld][floor]) ? [...orgRooms[bld][floor]] : [];
   if (q) rooms = rooms.filter(r => r.toLowerCase().includes(q));
   const list = document.getElementById('rlpList');
   if (!rooms.length) {
