@@ -1451,7 +1451,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.91</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.92</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2824,9 +2824,6 @@ function loadOrgPersonnel() {
           if (vr && !_seenVid.has(vr)) { _seenVid.add(vr); orgWorkTypes.push(vr); }
         }
       }
-      // Сбросить кэш помещений чтобы room-picker перечитал из orgRooms
-      _rlpRooms = null;
-
       // Определить участок текущего пользователя
       if (currentUser) {
         const me = allEmployeesList.find(e => e.fio.toLowerCase() === currentUser.fio.toLowerCase());
@@ -3581,7 +3578,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v2.91';
+const CURRENT_VERSION = 'v2.92';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5003,6 +5000,12 @@ async function buildOgnevoyDocument(data) {
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
   {
+    version: 'v2.92', date: '01.07.2026',
+    changes: [
+      'Исправлен пикер помещений — теперь всегда берёт актуальные данные, не зависает на пустом состоянии',
+    ]
+  },
+  {
     version: 'v2.91', date: '01.07.2026',
     changes: [
       'Список помещений теперь берётся только из листа организации, фоллбэк на удалённый лист «Место и работа» убран',
@@ -6177,31 +6180,23 @@ function openRoomPicker() {
 
 /* ── Room List Popup JS ── */
 // Данные берутся из колонок Здание/Отметка/Помещение листа организации (orgRooms)
-let _rlpRooms = null; // кэш {здание: {отметка: [помещения]}}
 let _rlpSelected = new Map();
 
-async function _rlpLoadRooms() {
-  if (_rlpRooms) return _rlpRooms;
-  _rlpRooms = (orgRooms && Object.keys(orgRooms).length > 0) ? orgRooms : {};
-  return _rlpRooms;
+function _rlpLoadRooms() {
+  return orgRooms || {};
 }
 
-async function openRoomListPopup() {
+function openRoomListPopup() {
   _rlpSelected = new Map();
   document.getElementById('roomListPopup').style.display = 'block';
   document.body.style.overflow = 'hidden';
-  document.getElementById('rlpList').innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray-400);font-size:12px">Загрузка…</div>';
-
-  try {
-    const rooms = await _rlpLoadRooms();
-    const bldSel = document.getElementById('rlpBuilding');
-    const buildings = Object.keys(rooms);
-    bldSel.innerHTML = buildings.map(b => `<option value="${b}">${b}</option>`).join('');
-    rlpFillFloors();
-  } catch(e) {
-    document.getElementById('rlpList').innerHTML = '<div style="padding:24px;text-align:center;color:#e53e3e;font-size:12px">Ошибка загрузки. Проверьте доступ к таблице.</div>';
-  }
   document.getElementById('rlpSearch').value = '';
+
+  const rooms = _rlpLoadRooms();
+  const bldSel = document.getElementById('rlpBuilding');
+  const buildings = Object.keys(rooms);
+  bldSel.innerHTML = buildings.map(b => `<option value="${b}">${b}</option>`).join('');
+  rlpFillFloors();
 }
 
 function rlpFillFloors() {
