@@ -771,9 +771,9 @@
   .issuer-wrap input { flex: 1; min-width: 0; }
   .issuer-pick-btn {
     flex-shrink: 0; background: var(--accent-light); border: 1.5px solid var(--accent);
-    border-radius: 8px; padding: 0 10px; cursor: pointer; color: var(--accent);
-    font-size: 14px; line-height: 1; transition: background .15s, color .15s;
-    display: flex; align-items: center; font-weight: 600;
+    border-radius: var(--radius); padding: 0 14px; cursor: pointer; color: var(--accent);
+    font-size: 12px; line-height: 1; transition: background .15s, color .15s;
+    display: flex; align-items: center; gap: 5px; font-weight: 600; white-space: nowrap;
   }
   .issuer-pick-btn:hover { background: var(--accent); color: white; }
 
@@ -1451,7 +1451,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.94</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.00</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1592,19 +1592,32 @@
           <label>ФИО лица, выдавшего наряд <span class="req">*</span></label>
           <div class="issuer-wrap">
             <input type="text" id="naradVydalFio" placeholder="Иванов Иван Иванович" oninput="issuerOnInput()" onkeydown="issuerKeyDown(event)" autocomplete="off">
-            <button class="issuer-pick-btn" type="button" onclick="openIssuerPicker()" title="Выбрать из списка">▾</button>
             <div class="issuer-ac-list" id="issuerAcList"></div>
           </div>
         </div>
         <div class="field">
           <label>Должность лица, выдавшего наряд <span class="req">*</span></label>
-          <input type="text" id="naradVydalDolzh" placeholder="Мастер, прораб, начальник участка" oninput="updateNaradVydal()">
+          <div style="display:flex;gap:6px;align-items:stretch">
+            <input type="text" id="naradVydalDolzh" placeholder="Мастер, прораб, начальник участка" oninput="updateNaradVydal()" style="flex:1;min-width:0">
+            <button class="issuer-pick-btn" type="button" onclick="openIssuerPicker()" title="Выбрать из списка">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Из списка
+            </button>
+          </div>
         </div>
         <input type="hidden" id="naradVydal">
 
         <div class="field col-span-2">
           <label>Вид работ <span class="req">*</span></label>
-          <input type="text" id="vidRabot" placeholder="" oninput="checkButtons()">
+          <div style="display:flex;gap:6px;align-items:stretch">
+            <input type="text" id="vidRabot" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0">
+            <button type="button" onclick="openWorkTypePicker()" title="Выбрать вид работ из списка"
+              style="flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:background .15s,color .15s"
+              onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--accent-light)';this.style.color='var(--accent)'">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Из списка
+            </button>
+          </div>
         </div>
 
         <div class="field col-span-2">
@@ -3572,7 +3585,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v2.94';
+const CURRENT_VERSION = 'v3.00';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -4991,6 +5004,42 @@ async function buildOgnevoyDocument(data) {
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
   {
+    version: 'v3.00', date: '01.07.2026',
+    changes: [
+      'Кнопка «Из списка» для выдавшего наряд перенесена в поле Должность — выровнена по высоте с инпутом',
+    ]
+  },
+  {
+    version: 'v2.99', date: '01.07.2026',
+    changes: [
+      'Кнопка «Из списка» для выдающего наряд перенесена в крайнее правое положение строки',
+    ]
+  },
+  {
+    version: 'v2.98', date: '01.07.2026',
+    changes: [
+      'ФИО и Должность лица, выдавшего наряд, снова в одну строку — кнопка «Из списка» у правого края ФИО',
+    ]
+  },
+  {
+    version: 'v2.97', date: '01.07.2026',
+    changes: [
+      'Поля «ФИО» и «Должность» лица, выдавшего наряд, теперь на всю ширину — кнопка «Из списка» у правого края',
+    ]
+  },
+  {
+    version: 'v2.96', date: '01.07.2026',
+    changes: [
+      'Кнопка выбора лица, выдавшего наряд, переоформлена в стиле остальных кнопок',
+    ]
+  },
+  {
+    version: 'v2.95', date: '01.07.2026',
+    changes: [
+      'Добавлен пикер «Из списка» для поля «Вид работ» — данные берутся из столбца S листа организации',
+    ]
+  },
+  {
     version: 'v2.94', date: '01.07.2026',
     changes: [
       'Исправлен пикер помещений — этажи и помещения теперь отображаются корректно',
@@ -6270,6 +6319,46 @@ function saveRoomListPopup() {
   closeRoomListPopup();
 }
 
+/* ── Work Type Picker JS ── */
+function openWorkTypePicker() {
+  if (!currentUser) { openLoginModal(); return; }
+  document.getElementById('workTypePopup').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('wtpSearch').value = '';
+  wtpUpdate();
+}
+
+function closeWorkTypePicker() {
+  document.getElementById('workTypePopup').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function wtpUpdate() {
+  const q = document.getElementById('wtpSearch').value.trim().toLowerCase();
+  let items = (orgWorkTypes && orgWorkTypes.length) ? orgWorkTypes : [];
+  if (q) items = items.filter(v => v.toLowerCase().includes(q));
+  const list = document.getElementById('wtpList');
+  if (!items.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:12px">' + (orgWorkTypes && orgWorkTypes.length ? 'Ничего не найдено' : 'Список видов работ не загружен') + '</div>';
+    return;
+  }
+  const cur = (document.getElementById('vidRabot').value || '').trim();
+  list.innerHTML = items.map(v => {
+    const sel = v === cur;
+    return `<div onclick="wtpSelect(${JSON.stringify(v)})" style="padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;${sel ? 'background:var(--accent-light);color:var(--accent);font-weight:600' : ''}" onmouseover="if(!this.dataset.sel)this.style.background='var(--bg-page)'" onmouseout="if(!this.dataset.sel)this.style.background=''" ${sel ? 'data-sel="1"' : ''}>${v}</div>`;
+  }).join('');
+}
+
+function wtpSelect(value) {
+  const el = document.getElementById('vidRabot');
+  if (el) { el.value = value; el.dispatchEvent(new Event('input')); }
+  closeWorkTypePicker();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('workTypePopup').style.display === 'block') closeWorkTypePicker();
+});
+
 function closeRoomPicker() {
   document.getElementById('roomPickerOverlay').classList.remove('open');
   document.body.style.overflow = '';
@@ -6793,6 +6882,23 @@ function copyDevEmail() {
         <button onclick="closeRoomListPopup()" style="border:1px solid var(--border);background:transparent;color:var(--text);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px">Отмена</button>
         <button id="rlpSaveBtn" onclick="saveRoomListPopup()" disabled style="background:var(--accent);color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600;opacity:.5">Применить</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Work Type Picker Popup ── -->
+<div id="workTypePopup" style="display:none;position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.5)" onclick="if(event.target===this)closeWorkTypePicker()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.35);width:440px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:var(--navy);color:white;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <span style="font-weight:700;font-size:14px">Вид работ</span>
+      <button onclick="closeWorkTypePicker()" style="background:rgba(255,255,255,.15);border:none;color:white;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1">✕</button>
+    </div>
+    <div style="padding:10px 14px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg-page)">
+      <input id="wtpSearch" type="text" placeholder="Поиск…" oninput="wtpUpdate()" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;background:var(--surface);color:var(--text)">
+    </div>
+    <div id="wtpList" style="overflow-y:auto;flex:1;padding:8px 6px;background:var(--surface)"></div>
+    <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;flex-shrink:0;gap:8px;background:var(--surface)">
+      <button onclick="closeWorkTypePicker()" style="border:1px solid var(--border);background:transparent;color:var(--text);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px">Отмена</button>
     </div>
   </div>
 </div>
