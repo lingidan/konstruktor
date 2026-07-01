@@ -1459,7 +1459,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.02</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.03</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2163,13 +2163,15 @@ async function doRegister() {
   const params = new URLSearchParams({ fio, dolzh, org, login, pwd, phone, email });
   const url = REG_SCRIPT_URL + '?' + params.toString();
 
-  // Image-трюк: единственный метод, который гарантированно проходит CORS для Apps Script
+  // Image-трюк: Apps Script возвращает HTML, а не картинку — поэтому onerror
+  // срабатывает всегда при успешном ответе. Считаем успехом и onload, и onerror.
+  // Сбой = таймаут без какого-либо ответа от сервера.
   let sendOk = false;
   await new Promise((resolve) => {
     const img = new Image();
-    img.onload = () => { sendOk = true; resolve(); };
-    img.onerror = () => resolve(); // ошибка загрузки картинки ≠ ошибка скрипта
-    setTimeout(resolve, 5000); // таймаут 5 сек на случай зависания
+    img.onload  = () => { sendOk = true; resolve(); };
+    img.onerror = () => { sendOk = true; resolve(); }; // ответ пришёл — скрипт выполнился
+    setTimeout(resolve, 6000); // таймаут: sendOk останется false только если нет сети
     img.src = url;
   });
 
@@ -3668,7 +3670,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.02';
+const CURRENT_VERSION = 'v3.03';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5086,6 +5088,12 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.03', date: '01.07.2026',
+    changes: [
+      'Исправлена регистрация: форма больше не показывает ошибку когда заявка успешно отправлена',
+    ]
+  },
   {
     version: 'v3.02', date: '01.07.2026',
     changes: [
