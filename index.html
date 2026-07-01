@@ -1451,7 +1451,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.89</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.90</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3581,7 +3581,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v2.89';
+const CURRENT_VERSION = 'v2.90';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -4035,12 +4035,14 @@ function applyTemplateData() {
     .then(csv => {
       const rows = _parseSheetCSV(csv);
       if (rows.length < 2) throw new Error('empty');
-      const hdrs = rows[0].map(h => (h || '').toLowerCase());
+      let hdrIdx = rows.findIndex(r => r.some(c => { const v = (c||'').toLowerCase(); return v.includes('назван') || v.includes('опасн'); }));
+      if (hdrIdx < 0) hdrIdx = 0;
+      const hdrs = rows[hdrIdx].map(h => (h || '').toLowerCase());
       const iName = hdrs.findIndex(h => h.includes('назван') || h.includes('опасн'));
       if (iName >= 0) {
         const seenNames = new Set();
         orgDangers = [];
-        for (let i = 1; i < rows.length; i++) {
+        for (let i = hdrIdx + 1; i < rows.length; i++) {
           const r = rows[i];
           const name = (r[iName] || '').trim();
           if (!name || seenNames.has(name)) continue;
@@ -4061,7 +4063,7 @@ function applyTemplateData() {
       const iP5St = hdrs.findIndex(h => h.includes('неизменн') && (h.includes('п.5') || h.includes('п5') || h.endsWith('5')));
       orgStaticData = { p3: null, p4rows: [], p5rows: [] };
       if (iP3St >= 0 || iP4St >= 0 || iP5St >= 0) {
-        for (let i = 1; i < rows.length; i++) {
+        for (let i = hdrIdx + 1; i < rows.length; i++) {
           const r = rows[i];
           const p3val = (iP3St >= 0 ? r[iP3St] : '').trim();
           const p4val = (iP4St >= 0 ? r[iP4St] : '').trim();
@@ -5000,6 +5002,12 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v2.90', date: '01.07.2026',
+    changes: [
+      'Автопоиск строки заголовков работает и для листа «Без регистрации» — многострочная шапка не ломает парсинг',
+    ]
+  },
   {
     version: 'v2.89', date: '01.07.2026',
     changes: [
