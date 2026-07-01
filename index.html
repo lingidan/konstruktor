@@ -297,6 +297,14 @@
   .auth-tooltip-inner p { margin: 0; }
   .auth-tooltip-divider { border: none; border-top: 1px solid var(--gray-200); margin: 10px 0; }
   .auth-tooltip-note { color: var(--gray-400) !important; font-size: 11.5px !important; }
+  .pending-badge {
+    display: inline-block; background: #fff3cd; color: #856404;
+    border: 1px solid #ffc107; border-radius: 10px;
+    font-size: 11px; font-weight: 600; padding: 2px 8px; margin-top: 4px;
+    letter-spacing: 0.01em;
+  }
+  #btnLogin.pending { background: var(--gray-100); color: var(--gray-500); border-color: #ffc107; }
+  #btnLogin.pending::after { content: ''; display: inline-block; width: 7px; height: 7px; background: #ffc107; border-radius: 50%; margin-left: 6px; vertical-align: middle; }
 
   /* ── Модальное окно Авторизации ── */
   #loginOverlay {
@@ -1451,7 +1459,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.00</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.01</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2166,9 +2174,15 @@ async function doRegister() {
   });
 
   if (sendOk) {
-    okEl.style.display = 'block';
     ['regFamiliya','regImya','regOtchestvo','regDolzh','regOrg','regLogin','regPassword','regPhone','regEmail']
       .forEach(id => { document.getElementById(id).value = ''; });
+    // Сохраняем как ожидающего пользователя и сразу «входим»
+    const pendingUser = { fio, dolzh, org, login, pwd, pending: true };
+    currentUser = pendingUser;
+    localStorage.setItem('auth_user', JSON.stringify(currentUser));
+    closeLoginModal();
+    updateAuthButton();
+    startPendingCheck();
   } else {
     errEl.textContent = 'Не удалось отправить заявку. Проверьте интернет и попробуйте снова.';
     errEl.style.display = 'block';
@@ -2188,20 +2202,35 @@ function updateAuthButton() {
   if (syncBtn) syncBtn.style.display = currentUser ? 'none' : '';
 
   if (currentUser) {
-    btn.classList.add('logged-in');
     const parts = currentUser.fio.trim().split(/\s+/);
     const short = parts.length >= 2 ? parts[0] + ' ' + parts[1][0] + '.' : parts[0];
-    txt.textContent = short + '  ×';
-    // Тултип: показываем данные пользователя
-    body.innerHTML =
-      '<b>' + currentUser.fio + '</b><br>' +
-      (currentUser.dolzh ? currentUser.dolzh + '<br>' : '') +
-      '<span style="color:var(--gray-400)">' + currentUser.org + '</span>';
-    div.style.display = 'block';
-    note.textContent = 'Нажмите, чтобы выйти из системы.';
-    note.style.color = '';
+    if (currentUser.pending) {
+      btn.classList.remove('logged-in');
+      btn.classList.add('pending');
+      txt.textContent = short;
+      body.innerHTML =
+        '<b>' + currentUser.fio + '</b><br>' +
+        (currentUser.dolzh ? currentUser.dolzh + '<br>' : '') +
+        (currentUser.org ? '<span style="color:var(--gray-400)">' + currentUser.org + '</span><br>' : '') +
+        '<span class="pending-badge">&#9203; На рассмотрении</span>';
+      div.style.display = "block";
+      note.textContent = 'Ваша заявка ожидает одобрения. После одобрения доступ откроется автоматически.';
+      note.style.color = '#856404';
+    } else {
+      btn.classList.add('logged-in');
+      btn.classList.remove('pending');
+      txt.textContent = short + "  ×";
+      body.innerHTML =
+        '<b>' + currentUser.fio + '</b><br>' +
+        (currentUser.dolzh ? currentUser.dolzh + '<br>' : '') +
+        '<span style="color:var(--gray-400)">' + currentUser.org + '</span>';
+      div.style.display = "block";
+      note.textContent = 'Нажмите, чтобы выйти из системы.';
+      note.style.color = "";
+    }
   } else {
     btn.classList.remove('logged-in');
+    btn.classList.remove('pending');
     txt.textContent = 'Войти';
     // Тултип: стандартная инструкция
     body.textContent = 'Войдите в систему, чтобы получить доступ к базе сотрудников вашей организации. После входа система автоматически подтягивает ФИО, должности и квалификацию работников при заполнении бланка наряда-допуска.';
@@ -2216,11 +2245,13 @@ function updateAuthButton() {
     if (currentUser) {
       const parts = currentUser.fio.trim().split(/\s+/);
       const short = parts.length >= 2 ? parts[0] + ' ' + parts[1][0] + '.' : parts[0];
-      bt.textContent = short + '  ×';
-      bl.classList.add('logged-in');
+      bt.textContent = currentUser.pending ? short : short + '  ×';
+      bl.classList.toggle('logged-in', !currentUser.pending);
+      bl.classList.toggle('pending', !!currentUser.pending);
     } else {
       bt.textContent = 'Войти';
       bl.classList.remove('logged-in');
+      bl.classList.remove('pending');
     }
   }
 }
@@ -2286,10 +2317,12 @@ function toGuillemets(s) {
 }
 
 function applyUserToForm() {
+  // Pending-пользователи не получают доступ к данным формы
+  const activeUser = (currentUser && !currentUser.pending) ? currentUser : null;
   const fields = {
-    fieldOrg:      { input: 'org',       display: 'orgDisplay',       value: currentUser ? toGuillemets(currentUser.org) : null },
-    fieldRukovFio: { input: 'rukovFio',  display: 'rukovFioDisplay',  value: currentUser ? currentUser.fio   : null },
-    fieldRukovDolzh:{ input: 'rukovDolzh', display: 'rukovDolzhDisplay', value: currentUser ? currentUser.dolzh : null },
+    fieldOrg:      { input: 'org',       display: 'orgDisplay',       value: activeUser ? toGuillemets(activeUser.org) : null },
+    fieldRukovFio: { input: 'rukovFio',  display: 'rukovFioDisplay',  value: activeUser ? activeUser.fio   : null },
+    fieldRukovDolzh:{ input: 'rukovDolzh', display: 'rukovDolzhDisplay', value: activeUser ? activeUser.dolzh : null },
   };
   for (const [fieldId, cfg] of Object.entries(fields)) {
     const field   = document.getElementById(fieldId);
@@ -2305,6 +2338,56 @@ function applyUserToForm() {
     }
   }
   checkButtons();
+}
+
+let _pendingCheckTimer = null;
+
+async function checkPendingApproval() {
+  if (!currentUser || !currentUser.pending) return;
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=%D0%9F%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D0%B8`;
+    const resp = await fetch(url);
+    if (!resp.ok) return;
+    const csv = await resp.text();
+    const rows = _parseSheetCSV(csv);
+    const found = rows.slice(1).find(r =>
+      (r[4] || '').trim() === currentUser.login && (r[5] || '').trim() === currentUser.pwd
+    );
+    if (found) {
+      // Одобрено — повышаем до полного доступа
+      currentUser = {
+        fio:   (found[1] || '').trim(),
+        dolzh: (found[2] || '').trim(),
+        org:   (found[3] || '').trim(),
+        login: currentUser.login,
+      };
+      localStorage.setItem('auth_user', JSON.stringify(currentUser));
+      if (_pendingCheckTimer) { clearInterval(_pendingCheckTimer); _pendingCheckTimer = null; }
+      updateAuthButton();
+      applyUserToForm();
+      loadOrgPersonnel();
+      // Уведомление пользователю
+      const msg = document.createElement('div');
+      msg.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#28a745;color:#fff;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2)';
+      msg.textContent = '✓ Доступ одобрен! Добро пожаловать, ' + currentUser.fio.split(' ')[0] + '!';
+      document.body.appendChild(msg);
+      setTimeout(() => msg.remove(), 5000);
+    }
+  } catch(e) { /* тихо игнорируем сетевые ошибки */ }
+}
+
+function startPendingCheck() {
+  if (_pendingCheckTimer) clearInterval(_pendingCheckTimer);
+  // Проверяем каждые 5 минут пока вкладка открыта
+  _pendingCheckTimer = setInterval(checkPendingApproval, 5 * 60 * 1000);
+  // Также проверяем при возврате на вкладку
+  document.addEventListener('visibilitychange', function _vc() {
+    if (document.visibilityState === 'visible' && currentUser && currentUser.pending) {
+      checkPendingApproval();
+    } else if (!currentUser || !currentUser.pending) {
+      document.removeEventListener('visibilitychange', _vc);
+    }
+  });
 }
 
 function openLogoutConfirm() {
@@ -3585,7 +3668,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.00';
+const CURRENT_VERSION = 'v3.01';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5003,6 +5086,13 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.01', date: '01.07.2026',
+    changes: [
+      'После регистрации пользователь сразу отображается в шапке со статусом «На рассмотрении»',
+      'Доступ к базе открывается автоматически после одобрения заявки администратором',
+    ]
+  },
   {
     version: 'v3.00', date: '01.07.2026',
     changes: [
@@ -6701,8 +6791,14 @@ document.addEventListener('wheel', e => {
   try {
     currentUser = JSON.parse(saved);
     updateAuthButton();
-    applyUserToForm();
-    loadOrgPersonnel();
+    if (currentUser.pending) {
+      // Сразу проверяем — вдруг уже одобрили пока не было вкладки
+      checkPendingApproval();
+      startPendingCheck();
+    } else {
+      applyUserToForm();
+      loadOrgPersonnel();
+    }
   } catch(e) {
     localStorage.removeItem('auth_user');
   }
