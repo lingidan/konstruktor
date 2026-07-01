@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -1045,37 +1045,6 @@
   #roomPickerSaveBtn:disabled { opacity: .4; cursor: default; }
   #roomPickerLoader { color: rgba(255,255,255,.5); font-size: 13px; padding: 40px; text-align: center; }
 
-  /* ── Map Picker ── */
-  #mapPickerOverlay {
-    display: none; position: fixed; inset: 0; z-index: 9500;
-    background: rgba(0,0,0,.82); flex-direction: column;
-  }
-  #mapPickerOverlay.open { display: flex; }
-  #mapPickerHeader {
-    background: var(--navy); color: white;
-    padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
-  }
-  #mapPickerHeader h3 { font-size: 15px; font-weight: 700; }
-  #mapPickerHeader p  { font-size: 12px; opacity: .65; margin-top: 2px; }
-  #mapPickerClose {
-    background: rgba(255,255,255,.15); border: none; color: white;
-    border-radius: 8px; padding: 8px 18px; cursor: pointer; font-size: 14px; font-weight: 600;
-  }
-  #mapPickerClose:hover { background: rgba(255,255,255,.28); }
-  #mapPickerBody {
-    flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 16px;
-  }
-  #sitePlanSVG { max-width: 100%; max-height: 100%; border-radius: 8px; }
-  .map-zone { cursor: pointer; transition: filter .15s; }
-  .map-zone:hover > rect,
-  .map-zone:hover > circle,
-  .map-zone:hover > ellipse { filter: brightness(1.18); }
-  .map-zone:hover { filter: drop-shadow(0 0 6px rgba(46,122,191,.7)); }
-  #mapPickerStatus {
-    background: var(--navy-dark); color: rgba(255,255,255,.8);
-    padding: 8px 20px; font-size: 13px; flex-shrink: 0; min-height: 34px;
-  }
-
   /* ── Бургер-меню (только мобиле) ── */
   #burgerBtn {
     display: none;
@@ -1482,7 +1451,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.86</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v2.88</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1642,9 +1611,7 @@
           <label>Место выполнения работ <span class="req">*</span></label>
           <div style="display:flex;gap:6px;align-items:stretch">
             <textarea id="mesto" rows="3" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0;resize:vertical;font-family:inherit;font-size:14px;padding:9px 12px;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius);color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(46,122,191,.18)'" onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
-            <!-- кнопка Схема временно скрыта -->
-            <button type="button" onclick="openMapPicker()" title="Открыть схему площадки" style="display:none">Схема</button>
-            <button type="button" onclick="openRoomPicker()" title="Выбрать помещения на плане"
+<button type="button" onclick="openRoomPicker()" title="Выбрать помещения на плане"
               style="flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:background .15s,color .15s"
               onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--accent-light)';this.style.color='var(--accent)'"
               >
@@ -2824,6 +2791,36 @@ function loadOrgPersonnel() {
           if (p5val) orgStaticData.p5rows.push(p5val);
         }
       }
+      // Место выполнения работ и вид работ из таблицы орг.
+      const iZdanie  = hdrs.findIndex(h => h.includes('здани'));
+      const iOtmetka = hdrs.findIndex(h => h.includes('отметк'));
+      const iPomesh  = hdrs.findIndex(h => h.includes('помещени'));
+      const iVidRab  = hdrs.findIndex(h => h.includes('вид') && h.includes('работ'));
+      orgRooms = {};
+      orgWorkTypes = [];
+      const _seenRooms = new Set();
+      const _seenVid   = new Set();
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (iZdanie >= 0 && iPomesh >= 0) {
+          const bld   = (r[iZdanie]  || '').trim();
+          const floor = iOtmetka >= 0 ? (r[iOtmetka] || '').trim() : '';
+          const room  = (r[iPomesh]  || '').trim();
+          if (bld && room) {
+            if (!orgRooms[bld]) orgRooms[bld] = {};
+            if (!orgRooms[bld][floor]) orgRooms[bld][floor] = [];
+            const key = bld + '|' + floor + '|' + room;
+            if (!_seenRooms.has(key)) { _seenRooms.add(key); orgRooms[bld][floor].push(room); }
+          }
+        }
+        if (iVidRab >= 0) {
+          const vr = (r[iVidRab] || '').trim();
+          if (vr && !_seenVid.has(vr)) { _seenVid.add(vr); orgWorkTypes.push(vr); }
+        }
+      }
+      // Сбросить кэш помещений чтобы room-picker перечитал из orgRooms
+      _rlpRooms = null;
+
       // Определить участок текущего пользователя
       if (currentUser) {
         const me = allEmployeesList.find(e => e.fio.toLowerCase() === currentUser.fio.toLowerCase());
@@ -3578,7 +3575,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v2.86';
+const CURRENT_VERSION = 'v2.88';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -3964,6 +3961,8 @@ const CUSTOM_KEY   = 'narad_custom_v1';
 let customFactors   = []; // [{id, name, p3, p4, p5}]
 let orgDangers      = []; // [{id, name, p3, p4, p5}] — из колонки «Название опасности» в таблице орг.
 let orgStaticData   = { p3: null, p4rows: [], p5rows: [] }; // неизменные мероприятия организации из Sheets
+let orgRooms        = {}; // {здание: {отметка: [помещения]}} — из колонок Здание/Отметка/Помещение
+let orgWorkTypes    = []; // [вид работ] — из колонки «Вид работ»
 
 // ─── Шаблонные данные (fallback для неавторизованных) ─────────────────────
 const TEMPLATE_FACTORS = [
@@ -4995,6 +4994,18 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v2.88', date: '01.07.2026',
+    changes: [
+      'Список помещений и вид работ теперь берётся из колонок основного листа организации (Здание / Отметка / Помещение / Вид работ)',
+    ]
+  },
+  {
+    version: 'v2.87', date: '01.07.2026',
+    changes: [
+      'Удалена схема площадки Курской АЭС-2 (кнопка, модальное окно, стили и JS)',
+    ]
+  },
   {
     version: 'v2.86', date: '30.06.2026',
     changes: [
@@ -6088,38 +6099,6 @@ function guideTo(idx) {
   _renderGuideSlide();
 }
 
-// ─── Map Picker ───────────────────────────────────────────────────────────
-function openMapPicker() {
-  document.getElementById('mapPickerOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  // Hover tooltips
-  document.querySelectorAll('#sitePlanSVG .map-zone').forEach(el => {
-    el.addEventListener('mouseenter', () => {
-      document.getElementById('mapPickerStatus').textContent =
-        '▶ ' + (el.dataset.info || el.dataset.label || '');
-    });
-    el.addEventListener('mouseleave', () => {
-      document.getElementById('mapPickerStatus').textContent =
-        'Наведите на здание для просмотра информации';
-    });
-  });
-}
-function closeMapPicker() {
-  document.getElementById('mapPickerOverlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
-function selectLocation(code) {
-  const el = document.getElementById('mesto');
-  if (!el) return;
-  el.value = code;
-  el.dispatchEvent(new Event('input'));
-  closeMapPicker();
-}
-// Закрытие по Escape
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeMapPicker();
-});
-
 // ─── Room Picker ──────────────────────────────────────────────────────────
 const RP_BUILDINGS = {
   '20UKC': {
@@ -6177,6 +6156,12 @@ let _rlpSelected = new Map();
 
 async function _rlpLoadRooms() {
   if (_rlpRooms) return _rlpRooms;
+  // Если данные уже загружены из листа организации — используем их
+  if (orgRooms && Object.keys(orgRooms).length > 0) {
+    _rlpRooms = orgRooms;
+    return _rlpRooms;
+  }
+  // Фоллбэк: отдельный лист «Место и работа»
   const _ssKey = 'session_rooms';
   const _parseCsv = csv => {
     const rows = _parseSheetCSV(csv).slice(1);
@@ -6696,220 +6681,6 @@ function copyDevEmail() {
 }
 </script>
 
-<!-- ── Map Picker Modal ── -->
-<div id="mapPickerOverlay">
-  <div id="mapPickerHeader">
-    <div>
-      <h3>Схема площадки Курской АЭС-2</h3>
-      <p>Нажмите на здание или зону — код вставится в поле «Место выполнения работ»</p>
-    </div>
-    <button id="mapPickerClose" onclick="closeMapPicker()">✕ Закрыть</button>
-  </div>
-  <div id="mapPickerBody">
-    <svg id="sitePlanSVG" viewBox="0 0 1240 880" xmlns="http://www.w3.org/2000/svg">
-      <!-- Фон площадки -->
-      <rect width="1240" height="880" fill="#e2d5b0"/>
-      <!-- Перimeter -->
-      <rect x="8" y="8" width="1224" height="864" fill="none" stroke="#9a8660" stroke-width="3" rx="4"/>
-
-      <!-- Дороги горизонтальные -->
-      <rect x="8" y="188" width="1224" height="32" fill="#d6c99a" opacity=".9"/>
-      <rect x="8" y="420" width="1224" height="32" fill="#d6c99a" opacity=".9"/>
-      <rect x="8" y="660" width="1224" height="32" fill="#d6c99a" opacity=".9"/>
-      <!-- Дороги вертикальные -->
-      <rect x="168" y="8" width="30" height="864" fill="#d6c99a" opacity=".9"/>
-      <rect x="430" y="8" width="30" height="864" fill="#d6c99a" opacity=".9"/>
-      <rect x="780" y="8" width="30" height="864" fill="#d6c99a" opacity=".9"/>
-      <rect x="1050" y="8" width="30" height="864" fill="#d6c99a" opacity=".9"/>
-
-      <!-- ════ ГРАДИРНИ ════ -->
-      <g class="map-zone" onclick="selectLocation('Градирня №1')" data-info="Градирня №1">
-        <ellipse cx="90" cy="100" rx="76" ry="82" fill="#b8a88a" stroke="#7a6a50" stroke-width="2"/>
-        <ellipse cx="90" cy="100" rx="48" ry="54" fill="#a09070" stroke="#7a6a50" stroke-width="1.5"/>
-        <ellipse cx="90" cy="118" rx="38" ry="14" fill="#8a7a60" stroke="#7a6a50" stroke-width="1"/>
-        <text x="90" y="96" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#3a2a10">Градирня</text>
-        <text x="90" y="110" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#3a2a10">№1</text>
-      </g>
-      <g class="map-zone" onclick="selectLocation('Градирня №2')" data-info="Градирня №2">
-        <ellipse cx="295" cy="100" rx="76" ry="82" fill="#b8a88a" stroke="#7a6a50" stroke-width="2"/>
-        <ellipse cx="295" cy="100" rx="48" ry="54" fill="#a09070" stroke="#7a6a50" stroke-width="1.5"/>
-        <ellipse cx="295" cy="118" rx="38" ry="14" fill="#8a7a60" stroke="#7a6a50" stroke-width="1"/>
-        <text x="295" y="96" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#3a2a10">Градирня</text>
-        <text x="295" y="110" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#3a2a10">№2</text>
-      </g>
-
-      <!-- ════ ЗДАНИЕ 21А (турбинное, левое длинное) ════ -->
-      <g class="map-zone" onclick="selectLocation('ЭБ-1, зд. 21А')" data-info="Здание 21А — Турбинное здание">
-        <rect x="14" y="224" width="150" height="190" fill="#9ab4c8" stroke="#4a7090" stroke-width="2" rx="2"/>
-        <text x="89" y="318" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="18" font-weight="700" fill="#1a3a52">21А</text>
-        <text x="89" y="334" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#2a5070">Турбинное</text>
-        <text x="89" y="345" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#2a5070">здание</text>
-      </g>
-
-      <!-- ════ ЗДАНИЕ 19А ════ -->
-      <g class="map-zone" onclick="selectLocation('ЭБ-1, зд. 19А')" data-info="Здание 19А">
-        <rect x="14" y="456" width="150" height="100" fill="#9ab4c8" stroke="#4a7090" stroke-width="2" rx="2"/>
-        <text x="89" y="512" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="18" font-weight="700" fill="#1a3a52">19А</text>
-      </g>
-
-      <!-- ════ ЗДАНИЕ 20А (левее реактора) ════ -->
-      <g class="map-zone" onclick="selectLocation('зд. 20А')" data-info="Здание 20А">
-        <rect x="200" y="224" width="220" height="190" fill="#9ab4c8" stroke="#4a7090" stroke-width="2" rx="2"/>
-        <text x="310" y="318" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="18" font-weight="700" fill="#1a3a52">20А</text>
-      </g>
-
-      <!-- ════ 20UMH (верхнее здание над реакторным комплексом) ════ -->
-      <g class="map-zone" onclick="selectLocation('зд. 20UMH')" data-info="20UMH">
-        <rect x="462" y="14" width="348" height="60" fill="#aab8cc" stroke="#5a7090" stroke-width="1.5" rx="2"/>
-        <text x="636" y="50" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#1a3050">20UMH</text>
-      </g>
-
-      <!-- ════ 20UMA ════ -->
-      <g class="map-zone" onclick="selectLocation('зд. 20UMA')" data-info="20UMA">
-        <rect x="462" y="80" width="210" height="104" fill="#aab8cc" stroke="#5a7090" stroke-width="1.5" rx="2"/>
-        <text x="567" y="138" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="14" font-weight="700" fill="#1a3050">20UMA</text>
-      </g>
-
-      <!-- ════ 20UQR (слева от реакторного) ════ -->
-      <g class="map-zone" onclick="selectLocation('зд. 20UQR')" data-info="20UQR">
-        <rect x="462" y="224" width="130" height="190" fill="#aab8cc" stroke="#5a7090" stroke-width="1.5" rx="2"/>
-        <text x="527" y="322" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#1a3050">20UQR</text>
-      </g>
-
-      <!-- ════ 20UKC — Вспомогательное реакторное здание (большой прямоугольник) ════ -->
-      <g class="map-zone" onclick="selectLocation('20UKC')" data-info="20UKC — Вспомогательное реакторное здание (2 энергоблок)">
-        <rect x="600" y="80" width="380" height="510" fill="#b0c2d8" stroke="#3a6090" stroke-width="3" rx="3"/>
-        <!-- Сетка помещений -->
-        <line x1="660" y1="80" x2="660" y2="590" stroke="#8090a8" stroke-width=".6" opacity=".5"/>
-        <line x1="730" y1="80" x2="730" y2="590" stroke="#8090a8" stroke-width=".6" opacity=".5"/>
-        <line x1="810" y1="80" x2="810" y2="590" stroke="#8090a8" stroke-width=".6" opacity=".5"/>
-        <line x1="890" y1="80" x2="890" y2="590" stroke="#8090a8" stroke-width=".6" opacity=".5"/>
-        <line x1="600" y1="155" x2="980" y2="155" stroke="#8090a8" stroke-width=".6" opacity=".5"/>
-        <line x1="600" y1="230" x2="980" y2="230" stroke="#8090a8" stroke-width=".6" opacity=".5"/>
-        <line x1="600" y1="310" x2="980" y2="310" stroke="#8090a8" stroke-width=".6" opacity=".5"/>
-        <line x1="600" y1="390" x2="980" y2="390" stroke="#8090a8" stroke-width=".6" opacity=".5"/>
-        <line x1="600" y1="456" x2="980" y2="456" stroke="#8090a8" stroke-width=".6" opacity=".5"/>
-        <line x1="600" y1="520" x2="980" y2="520" stroke="#8090a8" stroke-width=".6" opacity=".5"/>
-        <text x="790" y="348" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="20" font-weight="700" fill="#1a3a5c">20UKC</text>
-        <text x="790" y="370" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#2a4a70">Вспомогательное реакторное здание</text>
-        <text x="790" y="383" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#2a4a70">2-й энергоблок</text>
-      </g>
-
-      <!-- ════ 20UJA — Реакторное здание (круглый купол) ════ -->
-      <g class="map-zone" onclick="selectLocation('20UJA')" data-info="20UJA — Реакторное здание">
-        <!-- Outer containment ring -->
-        <circle cx="790" cy="310" r="108" fill="#8aaac4" stroke="#2a5080" stroke-width="3"/>
-        <!-- Pre-stressed containment -->
-        <circle cx="790" cy="310" r="80" fill="#7090ac" stroke="#2a5080" stroke-width="2"/>
-        <!-- Inner dome -->
-        <circle cx="790" cy="310" r="50" fill="#5878a0" stroke="#2a5080" stroke-width="1.5"/>
-        <!-- Reactor symbol -->
-        <circle cx="790" cy="310" r="20" fill="#3a5880" stroke="#1a3a60" stroke-width="1.5"/>
-        <text x="790" y="315" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" font-weight="700" fill="white">ВВЭР</text>
-        <text x="790" y="218" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="700" fill="#102040">20UJA</text>
-      </g>
-
-      <!-- ════ 20UBA (внизу реакторного) ════ -->
-      <g class="map-zone" onclick="selectLocation('зд. 20UBA')" data-info="20UBA">
-        <rect x="462" y="456" width="130" height="100" fill="#aab8cc" stroke="#5a7090" stroke-width="1.5" rx="2"/>
-        <text x="527" y="512" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#1a3050">20UBA</text>
-      </g>
-
-      <!-- ════ 20USC (правее реакторного комплекса) ════ -->
-      <g class="map-zone" onclick="selectLocation('зд. 20USC')" data-info="20USC">
-        <rect x="815" y="600" width="165" height="90" fill="#aab8cc" stroke="#5a7090" stroke-width="1.5" rx="2"/>
-        <text x="897" y="650" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#1a3050">20USC</text>
-      </g>
-
-      <!-- ════ 21USF — Резервуары (справа) ════ -->
-      <g class="map-zone" onclick="selectLocation('зд. 21USF')" data-info="21USF — Резервуары аварийного охлаждения">
-        <rect x="1085" y="14" width="148" height="200" fill="#b0c8b0" stroke="#4a7a50" stroke-width="1.5" rx="2"/>
-        <circle cx="1130" cy="80" r="38" fill="#88a888" stroke="#4a7a50" stroke-width="1.5"/>
-        <circle cx="1195" cy="80" r="38" fill="#88a888" stroke="#4a7a50" stroke-width="1.5"/>
-        <circle cx="1130" cy="160" r="38" fill="#88a888" stroke="#4a7a50" stroke-width="1.5"/>
-        <circle cx="1195" cy="160" r="38" fill="#88a888" stroke="#4a7a50" stroke-width="1.5"/>
-        <text x="1159" y="225" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="700" fill="#1a3a1a">21USF</text>
-      </g>
-
-      <!-- ════ Правый блок 1 ════ -->
-      <g class="map-zone" onclick="selectLocation('зд. 20UBC')" data-info="20UBC">
-        <rect x="1085" y="224" width="148" height="190" fill="#aab8cc" stroke="#5a7090" stroke-width="1.5" rx="2"/>
-        <text x="1159" y="322" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#1a3050">20UBC</text>
-      </g>
-
-      <!-- ════ Правый блок 2 ════ -->
-      <g class="map-zone" onclick="selectLocation('зд. 20UBP')" data-info="20UBP">
-        <rect x="1085" y="456" width="148" height="200" fill="#aab8cc" stroke="#5a7090" stroke-width="1.5" rx="2"/>
-        <text x="1159" y="562" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#1a3050">20UBP</text>
-      </g>
-
-      <!-- ════ Нижний ряд зданий ════ -->
-      <!-- 11UZ -->
-      <g class="map-zone" onclick="selectLocation('зд. 11UZ')" data-info="11UZ">
-        <rect x="200" y="695" width="220" height="100" fill="#c8c8a0" stroke="#8a8a50" stroke-width="1.5" rx="2"/>
-        <text x="310" y="752" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="16" font-weight="700" fill="#3a3a10">11UZ</text>
-      </g>
-      <!-- 13UZ -->
-      <g class="map-zone" onclick="selectLocation('зд. 13UZ')" data-info="13UZ">
-        <rect x="462" y="695" width="310" height="100" fill="#c8c8a0" stroke="#8a8a50" stroke-width="1.5" rx="2"/>
-        <text x="617" y="752" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="16" font-weight="700" fill="#3a3a10">13UZ</text>
-      </g>
-      <!-- 12Б -->
-      <g class="map-zone" onclick="selectLocation('зд. 12Б')" data-info="Здание 12Б">
-        <rect x="14" y="695" width="150" height="100" fill="#c8c8a0" stroke="#8a8a50" stroke-width="1.5" rx="2"/>
-        <text x="89" y="752" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="16" font-weight="700" fill="#3a3a10">12Б</text>
-      </g>
-      <!-- Правое нижнее -->
-      <g class="map-zone" onclick="selectLocation('зд. 21А (вост.)')" data-info="Здание 21А (восточная часть)">
-        <rect x="815" y="695" width="420" height="100" fill="#9ab4c8" stroke="#4a7090" stroke-width="1.5" rx="2"/>
-        <text x="1025" y="752" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="16" font-weight="700" fill="#1a3a52">21А (вост.)</text>
-      </g>
-
-      <!-- ════ КПП ════ -->
-      <g>
-        <rect x="10" y="10" width="60" height="24" fill="#1a3a5c" rx="3"/>
-        <text x="40" y="27" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" font-weight="700" fill="white">КПП 3а</text>
-      </g>
-      <g>
-        <rect x="575" y="10" width="55" height="24" fill="#1a3a5c" rx="3"/>
-        <text x="602" y="27" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" font-weight="700" fill="white">КПП 4</text>
-      </g>
-      <g>
-        <rect x="1170" y="10" width="60" height="24" fill="#1a3a5c" rx="3"/>
-        <text x="1200" y="27" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" font-weight="700" fill="white">КПП 1</text>
-      </g>
-      <g>
-        <rect x="1170" y="846" width="60" height="24" fill="#1a3a5c" rx="3"/>
-        <text x="1200" y="863" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" font-weight="700" fill="white">КПП 2</text>
-      </g>
-
-      <!-- ════ Компас ════ -->
-      <g transform="translate(1185,810)">
-        <circle r="22" fill="white" stroke="#9a8660" stroke-width="1.5" opacity=".92"/>
-        <polygon points="0,-16 -4,-4 0,0 4,-4" fill="#1a3a5c"/>
-        <polygon points="0,16 -4,4 0,0 4,4" fill="#9a8660"/>
-        <text x="0" y="-19" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" font-weight="700" fill="#1a3a5c">С</text>
-        <text x="0" y="27" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#9a8660">Ю</text>
-      </g>
-
-      <!-- Легенда -->
-      <rect x="14" y="810" width="220" height="60" fill="rgba(255,255,255,.75)" rx="6" stroke="#c8b890" stroke-width="1"/>
-      <rect x="24" y="822" width="14" height="10" fill="#9ab4c8" stroke="#4a7090" stroke-width="1"/>
-      <text x="44" y="832" font-family="Segoe UI,sans-serif" font-size="10" fill="#3a3a2a">— здания (кликабельны)</text>
-      <rect x="24" y="838" width="14" height="10" fill="#b8a88a" stroke="#7a6a50" stroke-width="1"/>
-      <text x="44" y="848" font-family="Segoe UI,sans-serif" font-size="10" fill="#3a3a2a">— градирни</text>
-      <rect x="24" y="854" width="14" height="10" fill="#88a888" stroke="#4a7a50" stroke-width="1"/>
-      <text x="44" y="864" font-family="Segoe UI,sans-serif" font-size="10" fill="#3a3a2a">— резервуары / ёмкости</text>
-
-      <!-- Заголовок схемы -->
-      <rect x="380" y="810" width="420" height="62" fill="rgba(26,58,92,.82)" rx="6"/>
-      <text x="590" y="833" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="700" fill="white">КУРСКАЯ АЭС-2</text>
-      <text x="590" y="848" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="rgba(255,255,255,.8)">Схема расположения объектов (упрощённая)</text>
-      <text x="590" y="863" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="rgba(255,255,255,.55)">Выберите здание для заполнения поля «Место выполнения работ»</text>
-    </svg>
-  </div>
-  <div id="mapPickerStatus">Наведите на здание для просмотра информации</div>
-</div>
 
 <!--
   ══════════════════════════════════════════════════════════════════════
