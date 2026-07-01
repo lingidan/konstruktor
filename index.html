@@ -1459,7 +1459,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.03</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.06</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2158,6 +2158,43 @@ async function doRegister() {
   const fio = [familiya, imya, otchestvo].filter(Boolean).join(' ');
 
   btn.disabled = true;
+  btn.textContent = 'Проверка…';
+
+  // Проверяем занятость логина и дубли заявок параллельно
+  try {
+    const encUsers = encodeURIComponent('Пользователи');
+    const encReg   = encodeURIComponent('Регистрация');
+    const [respU, respR] = await Promise.all([
+      fetch(`https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encUsers}`).catch(() => null),
+      fetch(`https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encReg}`).catch(() => null),
+    ]);
+    if (respU && respU.ok) {
+      const rows = _parseSheetCSV(await respU.text()).slice(1);
+      if (rows.some(r => (r[4] || '').trim().toLowerCase() === login.toLowerCase())) {
+        errEl.textContent = 'Этот логин уже занят. Выберите другой.';
+        errEl.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Отправить заявку';
+        return;
+      }
+    }
+    if (respR && respR.ok) {
+      const rows = _parseSheetCSV(await respR.text()).slice(1);
+      if (rows.some(r => (r[4] || '').trim().toLowerCase() === login.toLowerCase())) {
+        errEl.textContent = 'Заявка с таким логином уже отправлена. Дождитесь одобрения.';
+        errEl.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Отправить заявку';
+        return;
+      }
+      // Дубль по ФИО + организация
+      if (rows.some(r => (r[1] || '').trim().toLowerCase() === fio.toLowerCase() && (r[3] || '').trim().toLowerCase() === org.toLowerCase())) {
+        errEl.textContent = 'Заявка от этого сотрудника уже отправлена. Дождитесь одобрения.';
+        errEl.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Отправить заявку';
+        return;
+      }
+    }
+  } catch(e) { /* если проверка не прошла — не блокируем отправку */ }
+
   btn.textContent = 'Отправка…';
 
   const params = new URLSearchParams({ fio, dolzh, org, login, pwd, phone, email });
@@ -2371,7 +2408,9 @@ async function checkPendingApproval() {
       // Уведомление пользователю
       const msg = document.createElement('div');
       msg.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#28a745;color:#fff;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2)';
-      msg.textContent = '✓ Доступ одобрен! Добро пожаловать, ' + currentUser.fio.split(' ')[0] + '!';
+      const _nameParts = currentUser.fio.trim().split(/\s+/);
+      const _firstName = _nameParts[1] || _nameParts[0]; // [0]=фамилия, [1]=имя
+      msg.textContent = '✓ Доступ одобрен! Добро пожаловать, ' + _firstName + '!';
       document.body.appendChild(msg);
       setTimeout(() => msg.remove(), 5000);
     }
@@ -3670,7 +3709,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.03';
+const CURRENT_VERSION = 'v3.06';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5089,6 +5128,25 @@ async function buildOgnevoyDocument(data) {
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
   {
+    version: 'v3.06', date: '01.07.2026',
+    changes: [
+      'Исправлен пикер «Вид работ»: чекбоксы теперь работают, счётчик обновляется, виды разделяются запятой',
+    ]
+  },
+  {
+    version: 'v3.05', date: '01.07.2026',
+    changes: [
+      'Уведомление об одобрении показывает имя вместо фамилии',
+      'Данные организации обновляются автоматически при каждой загрузке страницы',
+    ]
+  },
+  {
+    version: 'v3.04', date: '01.07.2026',
+    changes: [
+      'Проверка занятости логина и дублей заявок перед регистрацией',
+    ]
+  },
+  {
     version: 'v3.03', date: '01.07.2026',
     changes: [
       'Исправлена регистрация: форма больше не показывает ошибку когда заявка успешно отправлена',
@@ -6428,9 +6486,9 @@ let _wtpSelected = new Set();
 
 function openWorkTypePicker() {
   if (!currentUser) { openLoginModal(); return; }
-  // Инициализируем выбранные из текущего значения поля
+  // Инициализируем выбранные из текущего значения поля (разделители: запятая или перенос)
   const cur = (document.getElementById('vidRabot').value || '').trim();
-  _wtpSelected = new Set(cur ? cur.split('\n').map(s => s.trim()).filter(Boolean) : []);
+  _wtpSelected = new Set(cur ? cur.split(/[,\n]/).map(s => s.trim()).filter(Boolean) : []);
   document.getElementById('workTypePopup').style.display = 'block';
   document.body.style.overflow = 'hidden';
   document.getElementById('wtpSearch').value = '';
@@ -6454,16 +6512,17 @@ function wtpUpdate() {
   }
   list.innerHTML = items.map((v, i) => {
     const sel = _wtpSelected.has(v);
+    const esc = v.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
     return `<label style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;cursor:pointer;border-radius:7px;${i > 0 ? 'border-top:1px solid var(--border);' : ''}${sel ? 'background:var(--accent-light);' : ''}transition:background .12s">
-      <input type="checkbox" ${sel ? 'checked' : ''} onchange="wtpToggle(${JSON.stringify(v)},this)" style="margin-top:2px;width:15px;height:15px;cursor:pointer;accent-color:var(--accent);flex-shrink:0">
+      <input type="checkbox" ${sel ? 'checked' : ''} data-val="${esc}" onchange="wtpToggle(this)" style="margin-top:2px;width:15px;height:15px;cursor:pointer;accent-color:var(--accent);flex-shrink:0">
       <span style="font-size:13px;line-height:1.45;color:${sel ? 'var(--accent)' : 'var(--text)'};font-weight:${sel ? '600' : '400'}">${v}</span>
     </label>`;
   }).join('');
 }
 
-function wtpToggle(value, cb) {
+function wtpToggle(cb) {
+  const value = cb.dataset.val;
   if (cb.checked) { _wtpSelected.add(value); } else { _wtpSelected.delete(value); }
-  // Обновляем стиль строки
   const label = cb.closest('label');
   const span = label.querySelector('span');
   if (cb.checked) {
@@ -6491,7 +6550,7 @@ function wtpUpdateFooter() {
 function wtpApply() {
   const el = document.getElementById('vidRabot');
   if (el) {
-    el.value = Array.from(_wtpSelected).join('\n');
+    el.value = Array.from(_wtpSelected).join(', ');
     el.dispatchEvent(new Event('input'));
   }
   closeWorkTypePicker();
@@ -6856,6 +6915,26 @@ document.addEventListener('wheel', e => {
     } else {
       applyUserToForm();
       loadOrgPersonnel();
+      // Фоновое обновление данных из листа — на случай если орг/должность изменились
+      (async () => {
+        try {
+          const url = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=%D0%9F%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D0%B8`;
+          const resp = await fetch(url);
+          if (!resp.ok) return;
+          const rows = _parseSheetCSV(await resp.text()).slice(1);
+          const found = rows.find(r => (r[4] || '').trim() === currentUser.login);
+          if (!found) return;
+          const freshOrg = (found[3] || '').trim();
+          if (freshOrg && freshOrg !== currentUser.org) {
+            currentUser.org = freshOrg;
+            currentUser.fio   = (found[1] || '').trim() || currentUser.fio;
+            currentUser.dolzh = (found[2] || '').trim() || currentUser.dolzh;
+            localStorage.setItem('auth_user', JSON.stringify(currentUser));
+            applyUserToForm();
+            loadOrgPersonnel();
+          }
+        } catch(e) {}
+      })();
     }
   } catch(e) {
     localStorage.removeItem('auth_user');
