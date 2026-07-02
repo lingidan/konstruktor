@@ -529,7 +529,7 @@
     display: flex; width: 100%; min-height: 0; overflow: hidden;
   }
   .guide-slide-visual {
-    flex: 0 0 57%; background: #f0f4f9; border-right: 1px solid var(--gray-100);
+    flex: 0 0 57%; background: var(--bg-page); border-right: 1px solid var(--gray-100);
     display: flex; align-items: center; justify-content: center;
     padding: 16px; overflow: hidden;
   }
@@ -563,7 +563,7 @@
   /* Тестовый аккаунт */
   .guide-creds {
     margin-top: 18px; padding: 14px 16px; border-radius: 12px;
-    background: #1a3a5c; color: white; font-size: 13px; line-height: 1.7;
+    background: var(--navy); color: white; font-size: 13px; line-height: 1.7;
   }
   .guide-creds .cred-label { font-size: 11px; font-weight: 700; opacity: .6; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 8px; }
   .guide-creds .cred-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
@@ -647,6 +647,10 @@
   [data-theme="dark"] .cpm-item.dup { background: rgba(224,82,82,.12); border-color: #e05252; }
   [data-theme="dark"] .cpm-dup-label { color: #f87171; }
   [data-theme="dark"] .lm-tab.active { color: var(--gray-700); }
+  [data-theme="dark"] .btn-sync.active { background: rgba(34,197,94,.12); color: #4ade80; border-color: rgba(34,197,94,.35); }
+  [data-theme="dark"] .btn-sync.active:hover { background: rgba(34,197,94,.2); }
+  [data-theme="dark"] .rp-list-item.selected { background: rgba(34,197,94,.15); color: #4ade80; }
+  [data-theme="dark"] .rp-list-item.selected:hover { background: rgba(34,197,94,.22); color: #86efac; }
   [data-theme="kedr"] {
     --navy: #2d4a3e; --navy-light: #3a5f50; --navy-dark: #1e3329;
     --accent: #3d8a6a; --accent-light: #d0e8dc;
@@ -1497,7 +1501,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.14</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.15</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3949,7 +3953,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.14';
+const CURRENT_VERSION = 'v3.15';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5368,6 +5372,13 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.15', date: '02.07.2026',
+    changes: [
+      'Исправлены темы: фон слайдов инструкции и блок тестового аккаунта теперь адаптируются к выбранной теме',
+      'Тёмная тема: исправлен цвет выбранной комнаты и активного статуса синхронизации',
+    ]
+  },
   {
     version: 'v3.14', date: '02.07.2026',
     changes: [
