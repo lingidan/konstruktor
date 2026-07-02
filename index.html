@@ -1501,7 +1501,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.15</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.16</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3953,7 +3953,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.15';
+const CURRENT_VERSION = 'v3.16';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5373,6 +5373,12 @@ async function buildOgnevoyDocument(data) {
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
   {
+    version: 'v3.16', date: '02.07.2026',
+    changes: [
+      'Инструкция: слайд «Блок 1» переработан — правильный порядок полей, кнопки «Из списка» и «Выбрать помещения» на своих местах',
+    ]
+  },
+  {
     version: 'v3.15', date: '02.07.2026',
     changes: [
       'Исправлены темы: фон слайдов инструкции и блок тестового аккаунта теперь адаптируются к выбранной теме',
@@ -6081,67 +6087,74 @@ const GUIDE_SLIDES = [
   {
     icon: '📋',
     title: 'Блок 1 — Реквизиты',
-    text: `<p>Заполните основные сведения о наряде. Поля со <strong style="color:#e53e3e">звёздочкой *</strong> — обязательные.</p>
-<p>Для появления кнопок скачивания нужны все шесть:<br>
-<strong>Дата выдачи *</strong><br>
-<strong>Вид работ *</strong><br>
-<strong>Место выполнения работ *</strong><br>
-<strong>ФИО руководителя работ *</strong><br>
-<strong>Должность руководителя *</strong><br>
-<strong>ФИО лица, выдавшего наряд *</strong></p>
-<p><strong>Поле «Вид работ»</strong> заполняется вручную или через кнопку <strong>«Из списка»</strong>. В пикере две вкладки:<br>
-— <strong>«Вид работ»</strong> — выберите один или несколько видов из списка организации<br>
-— <strong>«С применением»</strong> — добавьте инструмент или технику (УШМ, леса, вышка-тура и т.д.)<br>
-Выбранное из обеих вкладок объединяется в одну строку автоматически. Часто используемые пункты отмечайте звёздочкой ★ — они закрепятся вверху списка.</p>
-<p><strong>Руководитель</strong> — тот, кто непосредственно ведёт бригаду на объекте.<br>
-<strong>Лицо, выдавшее наряд</strong> — инженер или специалист ОТ, кто оформляет документ.</p>
-<p>Поле <strong>«Лицо, выдавшее наряд»</strong> поддерживает автодополнение: начните вводить фамилию — появится список подходящих сотрудников из базы. Выберите нужного — остальные данные подставятся сами.</p>
+    text: `<p>Заполните основные сведения о наряде. Поля со <strong style="color:#e53e3e">звёздочкой *</strong> — обязательные для появления Блока 4.</p>
+<p><strong>Дата выдачи *</strong> · <strong>ФИО руководителя работ *</strong> · <strong>Должность руководителя *</strong><br>
+<strong>ФИО лица, выдавшего наряд *</strong> · <strong>Вид работ *</strong> · <strong>Место выполнения работ *</strong></p>
+<p><strong>ФИО лица, выдавшего наряд</strong> — начните вводить фамилию, появится список сотрудников (автодополнение).<br>
+<strong>Должность лица, выдавшего наряд</strong> — кнопка <strong>«Из списка»</strong> открывает пикер с выбором.<br>
+<strong>Вид работ</strong> — кнопка <strong>«Из списка»</strong> открывает пикер с двумя вкладками: «Вид работ» и «С применением». Отмечайте ★ — закрепятся вверху.<br>
+<strong>Место выполнения работ</strong> — кнопка <strong>«Выбрать помещения»</strong> открывает интерактивный план.</p>
 <div class="guide-tip">Пока не заполнены все шесть полей — кнопки скачивания в Блоке 4 не появятся.</div>`,
     visual: `<svg viewBox="0 0 520 330" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,system-ui,sans-serif">
   <rect width="520" height="330" fill="#e4eaf3" rx="8"/>
-  <rect x="20" y="14" width="480" height="300" rx="10" fill="white" filter="url(#sh)"/>
-  <defs><filter id="sh"><feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="rgba(26,58,92,.12)"/></filter></defs>
-  <rect x="20" y="14" width="480" height="28" rx="10" fill="#1a3a5c"/>
-  <rect x="20" y="32" width="480" height="10" fill="#1a3a5c"/>
-  <rect x="30" y="19" width="28" height="14" rx="7" fill="rgba(255,255,255,.18)"/>
-  <text x="44" y="29" fill="white" font-size="6" text-anchor="middle" font-weight="700">БЛОК 1</text>
-  <text x="70" y="29" fill="white" font-size="9" font-weight="600">Реквизиты и общие сведения</text>
-  <text x="30" y="64" fill="#8fa6be" font-size="8">Организация</text>
-  <rect x="30" y="68" width="460" height="22" rx="5" fill="#eef2f7"/>
-  <text x="42" y="83" fill="#1e2d3d" font-size="9">ООО «ЮЭМ»</text>
-  <text x="30" y="108" fill="#8fa6be" font-size="8">Номер наряда</text>
-  <rect x="30" y="112" width="140" height="22" rx="5" fill="#eef2f7"/>
-  <text x="42" y="127" fill="#1e2d3d" font-size="9">НД-124</text>
-  <text x="198" y="108" fill="#8fa6be" font-size="8">Дата выдачи <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
-  <rect x="198" y="112" width="140" height="22" rx="5" fill="#eef2f7" stroke="#2e7abf" stroke-width="1.5"/>
-  <text x="210" y="127" fill="#1e2d3d" font-size="9">29.06.2026</text>
-  <text x="362" y="108" fill="#8fa6be" font-size="8">Вид работ <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
-  <rect x="362" y="112" width="88" height="22" rx="5" fill="#fff3cd" stroke="#f6ad55" stroke-width="1.5"/>
-  <text x="374" y="127" fill="#8fa6be" font-size="8">не заполнено</text>
-  <circle cx="450" cy="108" r="5" fill="#f6ad55"/>
-  <text x="450" y="112" fill="white" font-size="7" text-anchor="middle" font-weight="700">!</text>
-  <rect x="454" y="112" width="36" height="22" rx="5" fill="#2e7abf"/>
-  <text x="472" y="127" fill="white" font-size="7" text-anchor="middle" font-weight="600">Из списка</text>
-  <text x="30" y="154" fill="#8fa6be" font-size="8">Место выполнения работ <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
-  <rect x="30" y="158" width="460" height="22" rx="5" fill="#eef2f7"/>
-  <text x="42" y="173" fill="#1e2d3d" font-size="9">Кровля корпуса №3, ул. Ленина д. 12</text>
-  <text x="30" y="202" fill="#8fa6be" font-size="8">Руководитель работ (ФИО) <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
-  <rect x="30" y="206" width="222" height="22" rx="5" fill="#eef2f7"/>
-  <text x="42" y="221" fill="#1e2d3d" font-size="9">Петров Пётр Петрович</text>
-  <text x="268" y="202" fill="#8fa6be" font-size="8">Должность руководителя <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
-  <rect x="268" y="206" width="222" height="22" rx="5" fill="#eef2f7"/>
-  <text x="280" y="221" fill="#1e2d3d" font-size="9">Мастер строительных работ</text>
-  <text x="30" y="250" fill="#8fa6be" font-size="8">Лицо, выдавшее наряд (ФИО) <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
-  <rect x="30" y="254" width="296" height="22" rx="5" fill="#fff3cd" stroke="#f6ad55" stroke-width="1.5"/>
-  <text x="42" y="269" fill="#8fa6be" font-size="8">не заполнено</text>
-  <circle cx="326" cy="254" r="5" fill="#f6ad55"/>
-  <text x="326" y="258" fill="white" font-size="7" text-anchor="middle" font-weight="700">!</text>
-  <text x="342" y="250" fill="#8fa6be" font-size="8">Должность</text>
-  <rect x="342" y="254" width="148" height="22" rx="5" fill="#eef2f7"/>
-  <text x="354" y="269" fill="#1e2d3d" font-size="8">Инженер по ОТ</text>
-  <rect x="30" y="285" width="460" height="22" rx="6" fill="#f0fdf4" stroke="#22c55e" stroke-width="1"/>
-  <text x="260" y="295" fill="#166534" font-size="6.5" text-anchor="middle" font-weight="600">После авторизации: Организация, ФИО и Должность руководителя заполнятся и заблокируются автоматически</text>
-  <text x="260" y="304" fill="#166534" font-size="6.5" text-anchor="middle">Поле «Лицо, выдавшее наряд» получит список выбора из базы сотрудников</text>
+  <rect x="10" y="8" width="500" height="316" rx="10" fill="white"/>
+  <defs><filter id="sh1"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="rgba(26,58,92,.10)"/></filter></defs>
+  <rect x="10" y="8" width="500" height="26" rx="10" fill="#1a3a5c"/>
+  <rect x="10" y="24" width="500" height="10" fill="#1a3a5c"/>
+  <rect x="18" y="12" width="26" height="14" rx="7" fill="rgba(255,255,255,.18)"/>
+  <text x="31" y="22" fill="white" font-size="5.5" text-anchor="middle" font-weight="700">БЛОК 1</text>
+  <text x="54" y="22" fill="white" font-size="8.5" font-weight="600">Реквизиты и общие сведения</text>
+  <!-- Организация -->
+  <text x="20" y="48" fill="#8fa6be" font-size="7">ОРГАНИЗАЦИЯ</text>
+  <rect x="20" y="52" width="480" height="18" rx="4" fill="#eef2f7"/>
+  <text x="30" y="65" fill="#1e2d3d" font-size="8.5">ООО «ЮЭМ»</text>
+  <!-- Номер + Дата -->
+  <text x="20" y="82" fill="#8fa6be" font-size="7">НОМЕР НАРЯДА</text>
+  <rect x="20" y="86" width="228" height="18" rx="4" fill="#eef2f7"/>
+  <text x="30" y="99" fill="#1e2d3d" font-size="8.5">НД-124</text>
+  <text x="256" y="82" fill="#8fa6be" font-size="7">ДАТА ВЫДАЧИ <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
+  <rect x="256" y="86" width="244" height="18" rx="4" fill="#eef2f7" stroke="#2e7abf" stroke-width="1.5"/>
+  <text x="266" y="99" fill="#1e2d3d" font-size="8.5">02.07.2026</text>
+  <!-- Огневой наряд - серый -->
+  <text x="20" y="116" fill="#b0bec5" font-size="7">НОМЕР ОГНЕВОГО НАРЯДА <tspan font-style="italic">(только для огневых работ)</tspan></text>
+  <rect x="20" y="120" width="480" height="14" rx="4" fill="#f7f9fc" stroke="#e8ecf0" stroke-width="1"/>
+  <!-- ФИО рук + Должность рук -->
+  <text x="20" y="146" fill="#8fa6be" font-size="7">ФИО РУКОВОДИТЕЛЯ РАБОТ <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
+  <rect x="20" y="150" width="228" height="18" rx="4" fill="#eef2f7" stroke="#2e7abf" stroke-width="1.5"/>
+  <text x="30" y="163" fill="#1e2d3d" font-size="8">Петров Пётр Петрович</text>
+  <text x="256" y="146" fill="#8fa6be" font-size="7">ДОЛЖНОСТЬ РУКОВОДИТЕЛЯ <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
+  <rect x="256" y="150" width="244" height="18" rx="4" fill="#eef2f7" stroke="#2e7abf" stroke-width="1.5"/>
+  <text x="266" y="163" fill="#1e2d3d" font-size="8">Мастер строительных работ</text>
+  <!-- ФИО лица + autocomplete + Должность + кнопка -->
+  <text x="20" y="180" fill="#8fa6be" font-size="7">ФИО ЛИЦА, ВЫДАВШЕГО НАРЯД <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
+  <rect x="20" y="184" width="228" height="18" rx="4" fill="#fff3cd" stroke="#f6ad55" stroke-width="1.5"/>
+  <text x="30" y="197" fill="#8fa6be" font-size="7.5">Иванов…</text>
+  <!-- autocomplete dropdown hint -->
+  <rect x="20" y="202" width="228" height="14" rx="3" fill="white" stroke="#d8e2ee" stroke-width="1"/>
+  <text x="28" y="212" fill="#2e7abf" font-size="6.5">↩ Иванов Иван Иванович</text>
+  <text x="20" y="176" fill="#2e7abf" font-size="6" font-style="italic">автодополнение при вводе</text>
+  <text x="256" y="180" fill="#8fa6be" font-size="7">ДОЛЖНОСТЬ ЛИЦА, ВЫДАВШЕГО НАРЯД <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
+  <rect x="256" y="184" width="172" height="18" rx="4" fill="#eef2f7"/>
+  <text x="266" y="197" fill="#1e2d3d" font-size="8">Инженер по ОТ</text>
+  <rect x="432" y="184" width="68" height="18" rx="4" fill="#2e7abf"/>
+  <text x="466" y="197" fill="white" font-size="7" text-anchor="middle" font-weight="600">≡ Из списка</text>
+  <!-- Вид работ + кнопка -->
+  <text x="20" y="228" fill="#8fa6be" font-size="7">ВИД РАБОТ <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
+  <rect x="20" y="232" width="408" height="18" rx="4" fill="#fff3cd" stroke="#f6ad55" stroke-width="1.5"/>
+  <circle cx="428" cy="237" r="5" fill="#f6ad55"/>
+  <text x="428" y="241" fill="white" font-size="7" text-anchor="middle" font-weight="700">!</text>
+  <rect x="436" y="232" width="64" height="18" rx="4" fill="#2e7abf"/>
+  <text x="468" y="245" fill="white" font-size="7" text-anchor="middle" font-weight="600">≡ Из списка</text>
+  <!-- Место выполнения работ -->
+  <text x="20" y="262" fill="#8fa6be" font-size="7">МЕСТО ВЫПОЛНЕНИЯ РАБОТ <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
+  <rect x="20" y="266" width="386" height="30" rx="4" fill="#eef2f7" stroke="#2e7abf" stroke-width="1.5"/>
+  <text x="30" y="281" fill="#1e2d3d" font-size="8">Кровля корпуса №3, ось А-Д/1-4</text>
+  <rect x="410" y="266" width="90" height="30" rx="4" fill="#2e7abf"/>
+  <text x="455" y="278" fill="white" font-size="6.5" text-anchor="middle" font-weight="600">⊞ Выбрать</text>
+  <text x="455" y="290" fill="white" font-size="6.5" text-anchor="middle" font-weight="600">помещения</text>
+  <!-- Footer -->
+  <rect x="10" y="302" width="500" height="20" rx="5" fill="#f0fdf4" stroke="#22c55e" stroke-width="1"/>
+  <text x="260" y="315" fill="#166534" font-size="6.5" text-anchor="middle">После входа: Организация, ФИО и Должность руководителя заполнятся автоматически</text>
 </svg>`
   },
   {
