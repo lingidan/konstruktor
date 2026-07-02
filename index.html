@@ -1497,7 +1497,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.08</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.09</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3963,7 +3963,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.08';
+const CURRENT_VERSION = 'v3.09';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5385,6 +5385,12 @@ async function buildOgnevoyDocument(data) {
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
   {
+    version: 'v3.09', date: '02.07.2026',
+    changes: [
+      'Избранное в пикере «Вид работ» и «С применением»: звёздочка у каждого пункта, избранные закреплены вверху',
+    ]
+  },
+  {
     version: 'v3.08', date: '02.07.2026',
     changes: [
       'Добавлено поле «С применением» рядом с «Вид работ» — данные из столбца T листа организации',
@@ -6794,24 +6800,72 @@ function closeWorkTypePicker() {
   document.body.style.overflow = '';
 }
 
+// ── Избранное в пикере ────────────────────────────────────────────────────────
+function _wtpFavKey() { return 'wtp_fav_' + _wtpTab; }
+function _wtpFavLoad() {
+  try { return new Set(JSON.parse(localStorage.getItem(_wtpFavKey()) || '[]')); } catch(e) { return new Set(); }
+}
+function _wtpFavSave(set) {
+  try { localStorage.setItem(_wtpFavKey(), JSON.stringify([...set])); } catch(e) {}
+}
+function wtpToggleFav(btn, val) {
+  event.preventDefault(); event.stopPropagation();
+  const favs = _wtpFavLoad();
+  if (favs.has(val)) { favs.delete(val); btn.textContent = '☆'; btn.style.color = 'var(--gray-400)'; btn.title = 'Добавить в избранное'; }
+  else               { favs.add(val);    btn.textContent = '★'; btn.style.color = '#f5a623';           btn.title = 'Убрать из избранного'; }
+  _wtpFavSave(favs);
+  // Перерисовываем список не сбрасывая чекбоксы
+  wtpUpdate();
+}
+
+function _wtpItemHtml(v, i, isFav, isFirst) {
+  const sel = _wtpSelected.has(v);
+  const esc = v.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  const border = isFirst ? '' : 'border-top:1px solid var(--border);';
+  return `<label style="display:flex;align-items:flex-start;gap:8px;padding:9px 12px;cursor:pointer;border-radius:7px;${border}${sel ? 'background:var(--accent-light);' : ''}transition:background .12s">
+    <input type="checkbox" ${sel ? 'checked' : ''} data-val="${esc}" onchange="wtpToggle(this)" style="margin-top:2px;width:15px;height:15px;cursor:pointer;accent-color:var(--accent);flex-shrink:0">
+    <span style="font-size:13px;line-height:1.45;flex:1;color:${sel ? 'var(--accent)' : 'var(--text)'};font-weight:${sel ? '600' : '400'}">${v}</span>
+    <button type="button" onclick="wtpToggleFav(this,'${esc}')" title="${isFav ? 'Убрать из избранного' : 'Добавить в избранное'}"
+      style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;flex-shrink:0;color:${isFav ? '#f5a623' : 'var(--gray-400)'};">${isFav ? '★' : '☆'}</button>
+  </label>`;
+}
+
 function wtpUpdate() {
-  const q = document.getElementById('wtpSearch').value.trim().toLowerCase();
-  const src = _wtpTab === 'primenenie' ? orgApplicationTypes : orgWorkTypes;
+  const q    = document.getElementById('wtpSearch').value.trim().toLowerCase();
+  const src  = _wtpTab === 'primenenie' ? orgApplicationTypes : orgWorkTypes;
+  const favs = _wtpFavLoad();
   let items = (src && src.length) ? src : [];
-  if (q) items = items.filter(v => v.toLowerCase().includes(q));
-  const list = document.getElementById('wtpList');
-  if (!items.length) {
-    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:12px">' + (src && src.length ? 'Ничего не найдено' : 'Список не загружен') + '</div>';
+  if (q) {
+    // При поиске — всё в одном списке, избранные со звёздочкой
+    items = items.filter(v => v.toLowerCase().includes(q));
+    const list = document.getElementById('wtpList');
+    if (!items.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:12px">' + (src && src.length ? 'Ничего не найдено' : 'Список не загружен') + '</div>';
+      return;
+    }
+    list.innerHTML = items.map((v, i) => _wtpItemHtml(v, i, favs.has(v), i === 0)).join('');
     return;
   }
-  list.innerHTML = items.map((v, i) => {
-    const sel = _wtpSelected.has(v);
-    const esc = v.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-    return `<label style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;cursor:pointer;border-radius:7px;${i > 0 ? 'border-top:1px solid var(--border);' : ''}${sel ? 'background:var(--accent-light);' : ''}transition:background .12s">
-      <input type="checkbox" ${sel ? 'checked' : ''} data-val="${esc}" onchange="wtpToggle(this)" style="margin-top:2px;width:15px;height:15px;cursor:pointer;accent-color:var(--accent);flex-shrink:0">
-      <span style="font-size:13px;line-height:1.45;color:${sel ? 'var(--accent)' : 'var(--text)'};font-weight:${sel ? '600' : '400'}">${v}</span>
-    </label>`;
-  }).join('');
+
+  const list = document.getElementById('wtpList');
+  if (!items.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:12px">Список не загружен</div>';
+    return;
+  }
+
+  const favItems   = items.filter(v => favs.has(v));
+  const otherItems = items.filter(v => !favs.has(v));
+  let html = '';
+
+  if (favItems.length) {
+    html += `<div style="padding:5px 12px 3px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:.5px;text-transform:uppercase;">★ Избранное</div>`;
+    html += favItems.map((v, i) => _wtpItemHtml(v, i, true, i === 0)).join('');
+    if (otherItems.length) {
+      html += `<div style="padding:5px 12px 3px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:.5px;text-transform:uppercase;margin-top:4px;border-top:2px solid var(--gray-200)">Все</div>`;
+    }
+  }
+  html += otherItems.map((v, i) => _wtpItemHtml(v, i, false, i === 0 && !favItems.length)).join('');
+  list.innerHTML = html;
 }
 
 function wtpToggle(cb) {
