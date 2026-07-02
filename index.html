@@ -1497,7 +1497,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.11</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.14</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3949,7 +3949,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.11';
+const CURRENT_VERSION = 'v3.14';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5369,6 +5369,24 @@ async function buildOgnevoyDocument(data) {
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
   {
+    version: 'v3.14', date: '02.07.2026',
+    changes: [
+      'Инструкция: про избранное ★ в пикере бригады, про автодополнение поля «Лицо, выдавшее наряд»',
+    ]
+  },
+  {
+    version: 'v3.13', date: '02.07.2026',
+    changes: [
+      'В инструкции: добавлен слайд про пикер помещений, обновлён слайд авторизации — описана регистрация и кнопка «Тестовый аккаунт»',
+    ]
+  },
+  {
+    version: 'v3.12', date: '02.07.2026',
+    changes: [
+      'Обновлена инструкция: описан пикер «Вид работ» с вкладками и избранным, исправлено название поля «Место выполнения работ»',
+    ]
+  },
+  {
     version: 'v3.11', date: '02.07.2026',
     changes: [
       'Значения «С применением» вставляются без изменения регистра — аббревиатуры (УШМ, рЭДС) сохраняются как есть',
@@ -6056,12 +6074,17 @@ const GUIDE_SLIDES = [
 <p>Для появления кнопок скачивания нужны все шесть:<br>
 <strong>Дата выдачи *</strong><br>
 <strong>Вид работ *</strong><br>
-<strong>Место производства работ *</strong><br>
+<strong>Место выполнения работ *</strong><br>
 <strong>ФИО руководителя работ *</strong><br>
 <strong>Должность руководителя *</strong><br>
 <strong>ФИО лица, выдавшего наряд *</strong></p>
+<p><strong>Поле «Вид работ»</strong> заполняется вручную или через кнопку <strong>«Из списка»</strong>. В пикере две вкладки:<br>
+— <strong>«Вид работ»</strong> — выберите один или несколько видов из списка организации<br>
+— <strong>«С применением»</strong> — добавьте инструмент или технику (УШМ, леса, вышка-тура и т.д.)<br>
+Выбранное из обеих вкладок объединяется в одну строку автоматически. Часто используемые пункты отмечайте звёздочкой ★ — они закрепятся вверху списка.</p>
 <p><strong>Руководитель</strong> — тот, кто непосредственно ведёт бригаду на объекте.<br>
 <strong>Лицо, выдавшее наряд</strong> — инженер или специалист ОТ, кто оформляет документ.</p>
+<p>Поле <strong>«Лицо, выдавшее наряд»</strong> поддерживает автодополнение: начните вводить фамилию — появится список подходящих сотрудников из базы. Выберите нужного — остальные данные подставятся сами.</p>
 <div class="guide-tip">Пока не заполнены все шесть полей — кнопки скачивания в Блоке 4 не появятся.</div>`,
     visual: `<svg viewBox="0 0 520 330" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,system-ui,sans-serif">
   <rect width="520" height="330" fill="#e4eaf3" rx="8"/>
@@ -6082,11 +6105,13 @@ const GUIDE_SLIDES = [
   <rect x="198" y="112" width="140" height="22" rx="5" fill="#eef2f7" stroke="#2e7abf" stroke-width="1.5"/>
   <text x="210" y="127" fill="#1e2d3d" font-size="9">29.06.2026</text>
   <text x="362" y="108" fill="#8fa6be" font-size="8">Вид работ <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
-  <rect x="362" y="112" width="128" height="22" rx="5" fill="#fff3cd" stroke="#f6ad55" stroke-width="1.5"/>
+  <rect x="362" y="112" width="88" height="22" rx="5" fill="#fff3cd" stroke="#f6ad55" stroke-width="1.5"/>
   <text x="374" y="127" fill="#8fa6be" font-size="8">не заполнено</text>
-  <circle cx="489" cy="108" r="5" fill="#f6ad55"/>
-  <text x="489" y="112" fill="white" font-size="7" text-anchor="middle" font-weight="700">!</text>
-  <text x="30" y="154" fill="#8fa6be" font-size="8">Место производства работ <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
+  <circle cx="450" cy="108" r="5" fill="#f6ad55"/>
+  <text x="450" y="112" fill="white" font-size="7" text-anchor="middle" font-weight="700">!</text>
+  <rect x="454" y="112" width="36" height="22" rx="5" fill="#2e7abf"/>
+  <text x="472" y="127" fill="white" font-size="7" text-anchor="middle" font-weight="600">Из списка</text>
+  <text x="30" y="154" fill="#8fa6be" font-size="8">Место выполнения работ <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
   <rect x="30" y="158" width="460" height="22" rx="5" fill="#eef2f7"/>
   <text x="42" y="173" fill="#1e2d3d" font-size="9">Кровля корпуса №3, ул. Ленина д. 12</text>
   <text x="30" y="202" fill="#8fa6be" font-size="8">Руководитель работ (ФИО) <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
@@ -6169,6 +6194,7 @@ const GUIDE_SLIDES = [
 • <strong>«🔄 Синхронизация»</strong> — кнопка до входа, открывает форму авторизации<br>
 • <strong>«👥 Из базы»</strong> — выбор из базы сотрудников (только после входа)</p>
 <p>После выбора «Из базы» ФИО, должность, разряд, группа ЭБ и группа высотных работ <strong>заполняются автоматически</strong>.</p>
+<p>В пикере «Из базы» есть <strong>поиск</strong> и <strong>избранное</strong>: нажмите звёздочку ★ рядом с сотрудником — он закрепится вверху списка. Удобно для постоянного состава бригады.</p>
 <p>Кнопка <strong>«А→Я»</strong> сортирует бригаду по алфавиту. Строка 1 — бригадир, она не сортируется.</p>
 <div class="guide-tip">«Синхронизация» и «Из базы» — это одна логика: первая зовёт войти, вторая работает после входа.</div>`,
     visual: `<svg viewBox="0 0 520 330" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,system-ui,sans-serif">
@@ -6287,7 +6313,7 @@ const GUIDE_SLIDES = [
 <p>Проверьте каждое:<br>
 ✓ Дата выдачи<br>
 ✓ Вид работ<br>
-✓ Место производства работ<br>
+✓ Место выполнения работ<br>
 ✓ ФИО руководителя работ<br>
 ✓ Должность руководителя<br>
 ✓ ФИО лица, выдавшего наряд</p>
@@ -6308,7 +6334,7 @@ const GUIDE_SLIDES = [
   <rect x="20" y="118" width="234" height="36" rx="8" fill="white" stroke="#22c55e" stroke-width="1.5"/>
   <circle cx="42" cy="136" r="10" fill="#22c55e"/>
   <text x="42" y="140" fill="white" font-size="9" text-anchor="middle" font-weight="700">✓</text>
-  <text x="58" y="132" fill="#166534" font-size="9" font-weight="600">Место производства работ *</text>
+  <text x="58" y="132" fill="#166534" font-size="9" font-weight="600">Место выполнения работ *</text>
   <text x="58" y="145" fill="#22c55e" font-size="7.5">Кровля корпуса №3 — заполнено</text>
   <rect x="262" y="34" width="238" height="36" rx="8" fill="white" stroke="#22c55e" stroke-width="1.5"/>
   <circle cx="284" cy="52" r="10" fill="#22c55e"/>
@@ -6339,14 +6365,14 @@ const GUIDE_SLIDES = [
   {
     icon: '🔐',
     title: 'Авторизация',
-    text: `<p>Нажмите кнопку <strong>«👤 Войти»</strong> в правой панели, введите логин и пароль.</p>
+    text: `<p>Нажмите кнопку <strong>«👤 Войти»</strong> в правой панели. В окне две вкладки: <strong>«Войти»</strong> и <strong>«Регистрация»</strong>.</p>
+<p><strong>Уже есть аккаунт</strong> — введите логин и пароль. Или нажмите кнопку <strong>«Тестовый аккаунт»</strong> внизу формы — войдёт само, без ввода.</p>
+<p><strong>Нет аккаунта</strong> — перейдите на вкладку <strong>«Регистрация»</strong>, заполните ФИО, должность, организацию, придумайте логин и пароль, нажмите «Отправить заявку». После одобрения администратором аккаунт активируется автоматически — просто войдите с теми же данными.</p>
 <p><strong>Что происходит после входа:</strong><br>
-✓ Поля <em>Организация, ФИО руководителя, Должность</em> — заполняются и <strong>блокируются</strong> (данные из вашего профиля)<br>
-✓ Поле <em>«Лицо, выдавшее наряд»</em> — получает выпадающий список сотрудников, у которых есть право выдавать наряды<br>
-✓ В Блоке 3 появляется кнопка <strong>«👥 Из базы»</strong> — вся бригада с должностями и группами ЭБ добавляется за несколько кликов<br>
+✓ Организация, ФИО и должность руководителя — заполняются и <strong>блокируются</strong><br>
+✓ «Лицо, выдавшее наряд» — получает список сотрудников с правом выдачи нарядов<br>
+✓ В Блоке 3 появляется кнопка <strong>«👥 Из базы»</strong> — бригада добавляется за несколько кликов<br>
 ✓ Кнопка «Войти» меняется на ваши инициалы</p>
-<p>Для получения личного аккаунта: <strong>lingidanm@gmail.com</strong></p>
-<div class="guide-tip">Все данные обрабатываются только в вашем браузере — на сервер ничего не отправляется.</div>
 <div class="guide-creds">
   <div class="cred-label">Тестовый доступ — попробуй прямо сейчас</div>
   <div class="cred-row"><span class="cred-key">Логин:</span><span class="cred-val">тест</span></div>
@@ -6354,31 +6380,98 @@ const GUIDE_SLIDES = [
 </div>`,
     visual: `<svg viewBox="0 0 520 330" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,system-ui,sans-serif">
   <rect width="520" height="330" fill="#e4eaf3" rx="8"/>
-  <rect x="14" y="14" width="200" height="80" rx="8" fill="#1a3a5c" opacity=".25"/>
-  <text x="24" y="34" fill="#3d5168" font-size="7.5" font-weight="600">Правая панель (всегда видна)</text>
-  <rect x="24" y="40" width="180" height="20" rx="10" fill="#1a3a5c"/>
-  <text x="114" y="54" fill="white" font-size="8" text-anchor="middle" font-weight="700">👤 Войти</text>
-  <rect x="24" y="64" width="180" height="20" rx="10" fill="#1a3a5c" opacity=".5"/>
-  <text x="114" y="77" fill="rgba(255,255,255,.6)" font-size="7.5" text-anchor="middle">ℹ Инструкция</text>
-  <line x1="114" y1="96" x2="114" y2="116" stroke="#2e7abf" stroke-width="2" stroke-dasharray="4,3"/>
-  <polygon points="108,116 114,124 120,116" fill="#2e7abf"/>
-  <rect x="30" y="128" width="480" height="168" rx="10" fill="white" stroke="#2e7abf" stroke-width="2"/>
-  <rect x="30" y="128" width="480" height="26" rx="10" fill="#1a3a5c"/>
-  <rect x="30" y="142" width="480" height="12" fill="#1a3a5c"/>
-  <text x="270" y="145" fill="white" font-size="10" text-anchor="middle" font-weight="700">Авторизация</text>
-  <text x="60" y="178" fill="#8fa6be" font-size="8">Логин</text>
-  <rect x="60" y="182" width="420" height="26" rx="6" fill="#eef2f7"/>
-  <text x="74" y="200" fill="#1e2d3d" font-size="10">тест</text>
-  <text x="60" y="222" fill="#8fa6be" font-size="8">Пароль</text>
-  <rect x="60" y="226" width="420" height="26" rx="6" fill="#eef2f7"/>
-  <text x="74" y="244" fill="#1e2d3d" font-size="10">••••</text>
-  <rect x="60" y="264" width="420" height="26" rx="13" fill="#2e7abf"/>
-  <text x="270" y="281" fill="white" font-size="10" text-anchor="middle" font-weight="700">Войти</text>
-  <rect x="14" y="110" width="20" height="20" rx="10" fill="#22c55e"/>
-  <text x="24" y="124" fill="white" font-size="10" text-anchor="middle" font-weight="700">1</text>
-  <rect x="20" y="296" width="480" height="26" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
-  <text x="260" y="307" fill="#166534" font-size="7.5" text-anchor="middle" font-weight="700">✓ После входа:</text>
-  <text x="260" y="317" fill="#166534" font-size="7" text-anchor="middle">Ваши данные подставятся в бланк автоматически • В Блоке 3 появится кнопка «Из базы»</text>
+  <!-- Заголовок модала -->
+  <rect x="20" y="10" width="480" height="310" rx="12" fill="white" stroke="#2e7abf" stroke-width="1.5"/>
+  <rect x="20" y="10" width="480" height="30" rx="12" fill="#1a3a5c"/>
+  <rect x="20" y="28" width="480" height="12" fill="#1a3a5c"/>
+  <text x="260" y="30" fill="white" font-size="10" text-anchor="middle" font-weight="700">Авторизация</text>
+  <!-- Вкладки -->
+  <rect x="30" y="46" width="222" height="22" rx="11" fill="#2e7abf"/>
+  <text x="141" y="61" fill="white" font-size="9" text-anchor="middle" font-weight="700">Войти</text>
+  <rect x="258" y="46" width="232" height="22" rx="11" fill="#eef2f7"/>
+  <text x="374" y="61" fill="#8fa6be" font-size="9" text-anchor="middle" font-weight="600">Регистрация</text>
+  <!-- Форма входа -->
+  <text x="40" y="88" fill="#8fa6be" font-size="8">Логин</text>
+  <rect x="40" y="92" width="440" height="24" rx="5" fill="#eef2f7"/>
+  <text x="54" y="108" fill="#1e2d3d" font-size="9">мой_логин</text>
+  <text x="40" y="128" fill="#8fa6be" font-size="8">Пароль</text>
+  <rect x="40" y="132" width="440" height="24" rx="5" fill="#eef2f7"/>
+  <text x="54" y="148" fill="#1e2d3d" font-size="9">••••••</text>
+  <rect x="40" y="164" width="440" height="24" rx="12" fill="#2e7abf"/>
+  <text x="260" y="180" fill="white" font-size="9" text-anchor="middle" font-weight="700">Войти</text>
+  <!-- Кнопка тестового аккаунта -->
+  <rect x="40" y="194" width="440" height="24" rx="12" fill="none" stroke="#d8e2ee" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="260" y="210" fill="#8fa6be" font-size="8.5" text-anchor="middle">Тестовый аккаунт</text>
+  <line x1="330" y1="222" x2="390" y2="222" stroke="#f6ad55" stroke-width="1.5"/>
+  <polygon points="386,218 394,222 386,226" fill="#f6ad55"/>
+  <text x="406" y="218" fill="#c07800" font-size="7" font-weight="600">нажмите —</text>
+  <text x="406" y="228" fill="#c07800" font-size="7">войдёт само</text>
+  <!-- Разделитель -->
+  <line x1="40" y1="240" x2="220" y2="240" stroke="#eef2f7" stroke-width="1"/>
+  <text x="260" y="244" fill="#8fa6be" font-size="7.5" text-anchor="middle">нет аккаунта?</text>
+  <line x1="300" y1="240" x2="480" y2="240" stroke="#eef2f7" stroke-width="1"/>
+  <!-- Регистрация -->
+  <rect x="40" y="252" width="440" height="22" rx="11" fill="#eef2f7" stroke="#d8e2ee" stroke-width="1"/>
+  <text x="260" y="267" fill="#3d5168" font-size="8.5" text-anchor="middle" font-weight="600">Перейти на вкладку «Регистрация»</text>
+  <!-- Подсказка регистрации -->
+  <rect x="20" y="282" width="480" height="32" rx="8" fill="#fff8e6" stroke="#f6ad55" stroke-width="1"/>
+  <text x="260" y="295" fill="#8a4f00" font-size="7.5" text-anchor="middle" font-weight="600">Регистрация: заполните ФИО, должность, организацию, логин и пароль</text>
+  <text x="260" y="308" fill="#8a4f00" font-size="7" text-anchor="middle">После одобрения администратором — войдите с теми же данными ✓</text>
+</svg>`
+  },
+  {
+    icon: '🏢',
+    title: 'Пикер помещений',
+    text: `<p>Поле <strong>«Место выполнения работ»</strong> можно заполнить вручную, а можно нажать кнопку <strong>«Выбрать помещения»</strong> справа от поля.</p>
+<p>Откроется интерактивный план объекта — кликайте по помещениям, они подсветятся зелёным. Выбранные комнаты вставятся в поле автоматически, через запятую.</p>
+<p>Если нужно несколько помещений — просто кликайте по каждому. Повторный клик снимает выделение.</p>
+<p>План берётся из данных вашей организации. Если план не загружается — заполните поле вручную.</p>
+<div class="guide-tip">Кнопка «Выбрать помещения» доступна только после авторизации — план привязан к конкретной организации.</div>`,
+    visual: `<svg viewBox="0 0 520 330" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,system-ui,sans-serif">
+  <rect width="520" height="330" fill="#e4eaf3" rx="8"/>
+  <!-- Поле "Место выполнения работ" в форме -->
+  <rect x="20" y="14" width="480" height="52" rx="10" fill="white"/>
+  <text x="32" y="32" fill="#8fa6be" font-size="8">Место выполнения работ <tspan fill="#e53e3e" font-weight="700">*</tspan></text>
+  <rect x="32" y="36" width="366" height="22" rx="5" fill="#eef2f7"/>
+  <text x="44" y="51" fill="#1e2d3d" font-size="8.5">Корпус №3, кровля, ось А-Д/1-4</text>
+  <rect x="404" y="36" width="88" height="22" rx="5" fill="#2e7abf"/>
+  <text x="448" y="51" fill="white" font-size="8" text-anchor="middle" font-weight="600">⊞ Выбрать помещения</text>
+  <!-- Стрелка вниз -->
+  <line x1="260" y1="70" x2="260" y2="82" stroke="#2e7abf" stroke-width="2"/>
+  <polygon points="254,82 260,90 266,82" fill="#2e7abf"/>
+  <!-- Модал пикера -->
+  <rect x="20" y="92" width="480" height="224" rx="10" fill="white" stroke="#2e7abf" stroke-width="1.5"/>
+  <rect x="20" y="92" width="480" height="28" rx="10" fill="#1a3a5c"/>
+  <rect x="20" y="108" width="480" height="12" fill="#1a3a5c"/>
+  <text x="200" y="110" fill="white" font-size="10" font-weight="700">Выбор помещений</text>
+  <text x="476" y="110" fill="white" font-size="12" text-anchor="middle">✕</text>
+  <!-- Схема плана -->
+  <!-- Этаж -->
+  <rect x="36" y="128" width="448" height="170" rx="6" fill="#f0f4f8"/>
+  <!-- Комнаты -->
+  <rect x="48" y="138" width="90" height="60" rx="4" fill="white" stroke="#94b8d4" stroke-width="1.5"/>
+  <text x="93" y="166" fill="#1e40af" font-size="8.5" text-anchor="middle" font-weight="600">101</text>
+  <text x="93" y="178" fill="#3d5168" font-size="7" text-anchor="middle">Офис</text>
+  <rect x="144" y="138" width="90" height="60" rx="4" fill="#bbf7d0" stroke="#16a34a" stroke-width="2"/>
+  <text x="189" y="166" fill="#15803d" font-size="8.5" text-anchor="middle" font-weight="700">102</text>
+  <text x="189" y="178" fill="#15803d" font-size="7" text-anchor="middle">Серверная ✓</text>
+  <rect x="240" y="138" width="90" height="60" rx="4" fill="white" stroke="#94b8d4" stroke-width="1.5"/>
+  <text x="285" y="166" fill="#1e40af" font-size="8.5" text-anchor="middle" font-weight="600">103</text>
+  <text x="285" y="178" fill="#3d5168" font-size="7" text-anchor="middle">Склад</text>
+  <rect x="336" y="138" width="90" height="60" rx="4" fill="#bbf7d0" stroke="#16a34a" stroke-width="2"/>
+  <text x="381" y="166" fill="#15803d" font-size="8.5" text-anchor="middle" font-weight="700">104</text>
+  <text x="381" y="178" fill="#15803d" font-size="7" text-anchor="middle">Кровля ✓</text>
+  <rect x="48" y="204" width="136" height="60" rx="4" fill="white" stroke="#94b8d4" stroke-width="1.5"/>
+  <text x="116" y="232" fill="#1e40af" font-size="8.5" text-anchor="middle" font-weight="600">105</text>
+  <text x="116" y="244" fill="#3d5168" font-size="7" text-anchor="middle">Коридор</text>
+  <rect x="190" y="204" width="90" height="60" rx="4" fill="white" stroke="#94b8d4" stroke-width="1.5"/>
+  <text x="235" y="232" fill="#1e40af" font-size="8.5" text-anchor="middle" font-weight="600">106</text>
+  <text x="235" y="244" fill="#3d5168" font-size="7" text-anchor="middle">Тех. помещ.</text>
+  <rect x="286" y="204" width="140" height="60" rx="4" fill="white" stroke="#94b8d4" stroke-width="1.5"/>
+  <text x="356" y="232" fill="#1e40af" font-size="8.5" text-anchor="middle" font-weight="600">107</text>
+  <text x="356" y="244" fill="#3d5168" font-size="7" text-anchor="middle">Мастерская</text>
+  <!-- Подсказка -->
+  <text x="260" y="278" fill="#8fa6be" font-size="7" text-anchor="middle" font-style="italic">Зелёные — выбраны. Нажмите «Применить» — они вставятся в поле автоматически</text>
 </svg>`
   },
   {
