@@ -1497,7 +1497,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.07</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.08</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1658,6 +1658,19 @@
           <div style="display:flex;gap:6px;align-items:stretch">
             <input type="text" id="vidRabot" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0">
             <button type="button" onclick="openWorkTypePicker()" title="Выбрать вид работ из списка"
+              style="flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:background .15s,color .15s"
+              onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--accent-light)';this.style.color='var(--accent)'">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Из списка
+            </button>
+          </div>
+        </div>
+
+        <div class="field col-span-2">
+          <label>С применением</label>
+          <div style="display:flex;gap:6px;align-items:stretch">
+            <input type="text" id="primenenie" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0">
+            <button type="button" onclick="openWorkTypePicker('primenenie')" title="Выбрать из списка"
               style="flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:background .15s,color .15s"
               onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--accent-light)';this.style.color='var(--accent)'">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -2079,6 +2092,7 @@ function collectFormData() {
     soglasov:    orgDangers.some(f => f.name.toLowerCase().includes('земл') && document.getElementById(f.id)?.checked) ? '' : 'Не требуется',
     mesto:       document.getElementById('mesto').value.trim(),
     vidRabot:    document.getElementById('vidRabot').value.trim(),
+    primenenie:  document.getElementById('primenenie')?.value.trim() || '',
     // Блок 2 — факторы с текстами п.3/п.4/п.5
     activeFactors,
     // Блок 3 — исполнители
@@ -3168,8 +3182,11 @@ function loadOrgPersonnel() {
       const iVidRab  = hdrs.findIndex(h => h.includes('вид') && h.includes('работ'));
       orgRooms = {};
       orgWorkTypes = [];
+      orgApplicationTypes = [];
+      const iApply = hdrs.findIndex(h => h.includes('применени'));
       const _seenRooms = new Set();
       const _seenVid   = new Set();
+      const _seenApp   = new Set();
       for (let i = 1; i < rows.length; i++) {
         const r = rows[i];
         if (iZdanie >= 0 && iPomesh >= 0) {
@@ -3186,6 +3203,10 @@ function loadOrgPersonnel() {
         if (iVidRab >= 0) {
           const vr = (r[iVidRab] || '').trim();
           if (vr && !_seenVid.has(vr)) { _seenVid.add(vr); orgWorkTypes.push(vr); }
+        }
+        if (iApply >= 0) {
+          const ap = (r[iApply] || '').trim();
+          if (ap && !_seenApp.has(ap)) { _seenApp.add(ap); orgApplicationTypes.push(ap); }
         }
       }
       // Определить участок текущего пользователя
@@ -3942,7 +3963,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.07';
+const CURRENT_VERSION = 'v3.08';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -4328,7 +4349,8 @@ let customFactors   = []; // [{id, name, p3, p4, p5}]
 let orgDangers      = []; // [{id, name, p3, p4, p5}] — из колонки «Название опасности» в таблице орг.
 let orgStaticData   = { p3: null, p4rows: [], p5rows: [] }; // неизменные мероприятия организации из Sheets
 let orgRooms        = {}; // {здание: {отметка: [помещения]}} — из колонок Здание/Отметка/Помещение
-let orgWorkTypes    = []; // [вид работ] — из колонки «Вид работ»
+let orgWorkTypes       = []; // [вид работ] — из колонки «Вид работ»
+let orgApplicationTypes = []; // [с применением] — из колонки «С применением»
 
 // ─── Шаблонные данные (fallback для неавторизованных) ─────────────────────
 const TEMPLATE_FACTORS = [
@@ -4711,7 +4733,7 @@ function clearCurrentTab() {
 
 function clearFormUI(withRows) {
   ['org','nomer','dateStart','nomerOgn','ppr','naradVydalDolzh','naradVydalFio',
-   'naradVydal','rukovDolzh','rukovFio','utvPprv','mesto','vidRabot'].forEach(id => {
+   'naradVydal','rukovDolzh','rukovFio','utvPprv','mesto','vidRabot','primenenie'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   orgDangers.forEach(f => { const el = document.getElementById(f.id); if (el) el.checked = false; });
@@ -4753,6 +4775,7 @@ function saveFormData() {
     utvPprv:    document.getElementById('utvPprv').value,
     mesto:      document.getElementById('mesto').value,
     vidRabot:   document.getElementById('vidRabot').value,
+    primenenie: document.getElementById('primenenie')?.value || '',
     sec6Rows:   document.getElementById('sec6Rows').value,
     sec10Rows:  document.getElementById('sec10Rows').value,
     cbStates,
@@ -4783,7 +4806,7 @@ function _formSnapshot() {
     vidOgn: g('vidOgn'), nomerOgn: g('nomerOgn'), ppr: g('ppr'),
     naradVydalDolzh: g('naradVydalDolzh'), naradVydalFio: g('naradVydalFio'),
     rukovDolzh: g('rukovDolzh'), rukovFio: g('rukovFio'),
-    utvPprv: g('utvPprv'), mesto: g('mesto'), vidRabot: g('vidRabot'),
+    utvPprv: g('utvPprv'), mesto: g('mesto'), vidRabot: g('vidRabot'), primenenie: g('primenenie'),
     sec6Rows: g('sec6Rows'), sec10Rows: g('sec10Rows'),
     cbStates, execRows
   };
@@ -4797,7 +4820,7 @@ function _applySnapshot(snap) {
   set('naradVydalDolzh', snap.naradVydalDolzh); set('naradVydalFio', snap.naradVydalFio);
   updateNaradVydal();
   set('rukovDolzh', snap.rukovDolzh); set('rukovFio', snap.rukovFio);
-  set('utvPprv', snap.utvPprv); set('mesto', snap.mesto); set('vidRabot', snap.vidRabot);
+  set('utvPprv', snap.utvPprv); set('mesto', snap.mesto); set('vidRabot', snap.vidRabot); set('primenenie', snap.primenenie);
   set('sec6Rows', snap.sec6Rows); set('sec10Rows', snap.sec10Rows);
   if (snap.dateStart) setEndDate();
   const sr6 = document.getElementById('sec6RowsValue');
@@ -4908,6 +4931,7 @@ function loadFormData() {
   set('utvPprv',    snap.utvPprv);
   set('mesto',      snap.mesto);
   set('vidRabot',   snap.vidRabot);
+  set('primenenie', snap.primenenie);
   set('sec6Rows',   snap.sec6Rows);
   set('sec10Rows',  snap.sec10Rows);
 
@@ -5360,6 +5384,13 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.08', date: '02.07.2026',
+    changes: [
+      'Добавлено поле «С применением» рядом с «Вид работ» — данные из столбца T листа организации',
+      'Пикер «Из списка» теперь переключается между вкладками «Вид работ» и «С применением»',
+    ]
+  },
   {
     version: 'v3.07', date: '02.07.2026',
     changes: [
@@ -6724,14 +6755,35 @@ function saveRoomListPopup() {
 
 /* ── Work Type Picker JS ── */
 let _wtpSelected = new Set();
+let _wtpTab = 'vidRabot'; // 'vidRabot' | 'primenenie'
 
-function openWorkTypePicker() {
+function openWorkTypePicker(tab) {
   if (!currentUser) { openLoginModal(); return; }
-  // Инициализируем выбранные из текущего значения поля (разделители: запятая или перенос)
-  const cur = (document.getElementById('vidRabot').value || '').trim();
+  _wtpTab = tab || 'vidRabot';
+  const cur = (document.getElementById(_wtpTab)?.value || '').trim();
   _wtpSelected = new Set(cur ? cur.split(/[,\n]/).map(s => s.trim()).filter(Boolean) : []);
   document.getElementById('workTypePopup').style.display = 'block';
   document.body.style.overflow = 'hidden';
+  document.getElementById('wtpSearch').value = '';
+  wtpSwitchTab(_wtpTab, true);
+}
+
+function wtpSwitchTab(tab, skipReload) {
+  if (!skipReload && _wtpTab !== tab) {
+    // Сохраняем выбранное в текущее поле перед переключением
+    const el = document.getElementById(_wtpTab);
+    if (el) { el.value = Array.from(_wtpSelected).join(', '); el.dispatchEvent(new Event('input')); }
+  }
+  _wtpTab = tab;
+  // Читаем текущее значение нового поля
+  const cur = (document.getElementById(tab)?.value || '').trim();
+  _wtpSelected = new Set(cur ? cur.split(/[,\n]/).map(s => s.trim()).filter(Boolean) : []);
+  // Обновляем стиль вкладок
+  const isVid = tab === 'vidRabot';
+  const tabVid = document.getElementById('wtpTabVid');
+  const tabApp = document.getElementById('wtpTabApp');
+  if (tabVid) { tabVid.style.background = isVid ? 'rgba(255,255,255,.22)' : 'transparent'; tabVid.style.color = isVid ? 'white' : 'rgba(255,255,255,.65)'; tabVid.style.fontWeight = isVid ? '700' : '600'; }
+  if (tabApp) { tabApp.style.background = !isVid ? 'rgba(255,255,255,.22)' : 'transparent'; tabApp.style.color = !isVid ? 'white' : 'rgba(255,255,255,.65)'; tabApp.style.fontWeight = !isVid ? '700' : '600'; }
   document.getElementById('wtpSearch').value = '';
   wtpUpdate();
   wtpUpdateFooter();
@@ -6744,11 +6796,12 @@ function closeWorkTypePicker() {
 
 function wtpUpdate() {
   const q = document.getElementById('wtpSearch').value.trim().toLowerCase();
-  let items = (orgWorkTypes && orgWorkTypes.length) ? orgWorkTypes : [];
+  const src = _wtpTab === 'primenenie' ? orgApplicationTypes : orgWorkTypes;
+  let items = (src && src.length) ? src : [];
   if (q) items = items.filter(v => v.toLowerCase().includes(q));
   const list = document.getElementById('wtpList');
   if (!items.length) {
-    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:12px">' + (orgWorkTypes && orgWorkTypes.length ? 'Ничего не найдено' : 'Список видов работ не загружен') + '</div>';
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:12px">' + (src && src.length ? 'Ничего не найдено' : 'Список не загружен') + '</div>';
     return;
   }
   list.innerHTML = items.map((v, i) => {
@@ -6789,7 +6842,7 @@ function wtpUpdateFooter() {
 }
 
 function wtpApply() {
-  const el = document.getElementById('vidRabot');
+  const el = document.getElementById(_wtpTab);
   if (el) {
     el.value = Array.from(_wtpSelected).join(', ');
     el.dispatchEvent(new Event('input'));
@@ -7363,8 +7416,13 @@ function copyDevEmail() {
 <!-- ── Work Type Picker Popup ── -->
 <div id="workTypePopup" style="display:none;position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.5)" onclick="if(event.target===this)closeWorkTypePicker()">
   <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.35);width:440px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
-    <div style="background:var(--navy);color:white;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-      <span style="font-weight:700;font-size:14px">Вид работ</span>
+    <div style="background:var(--navy);color:white;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div style="display:flex;gap:4px">
+        <button id="wtpTabVid" onclick="wtpSwitchTab('vidRabot')"
+          style="background:rgba(255,255,255,.22);border:none;color:white;border-radius:6px;padding:5px 14px;cursor:pointer;font-size:13px;font-weight:700">Вид работ</button>
+        <button id="wtpTabApp" onclick="wtpSwitchTab('primenenie')"
+          style="background:transparent;border:none;color:rgba(255,255,255,.65);border-radius:6px;padding:5px 14px;cursor:pointer;font-size:13px;font-weight:600">С применением</button>
+      </div>
       <button onclick="closeWorkTypePicker()" style="background:rgba(255,255,255,.15);border:none;color:white;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1">✕</button>
     </div>
     <div style="padding:10px 14px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg-page)">
