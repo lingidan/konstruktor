@@ -363,6 +363,19 @@
     text-decoration: underline; text-underline-offset: 2px;
   }
   .lm-link:hover { color: var(--navy); }
+
+  /* ── Выбор типа аккаунта при регистрации ── */
+  .reg-type-toggle { display: flex; flex-direction: column; gap: 8px; }
+  .reg-type-opt {
+    display: flex; flex-direction: column; gap: 2px; text-align: left;
+    padding: 10px 12px; border: 1.5px solid var(--gray-200); border-radius: 8px;
+    background: var(--white); cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .reg-type-opt:hover { border-color: var(--accent); }
+  .reg-type-opt.active { border-color: var(--accent); background: var(--accent-light); }
+  .reg-type-title { font-size: 13px; font-weight: 700; color: var(--navy); }
+  .reg-type-desc { font-size: 11.5px; color: var(--gray-400); line-height: 1.4; }
+
   #regError { color: #dc2626; font-size: 13px; text-align: center; display: none; }
   #regSuccess { color: #217a47; font-size: 13px; text-align: center; display: none; }
   #regSubmit {
@@ -807,13 +820,13 @@
   .issuer-ac-dolzh { font-size: 11.5px; color: var(--gray-400); }
 
   /* Модальный пикер */
-  #issuerPickerOverlay {
+  #issuerPickerOverlay, #rukovPickerOverlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,.4); z-index: 800;
     justify-content: center; align-items: flex-start; padding-top: 60px;
   }
-  #issuerPickerOverlay.open { display: flex; }
-  #issuerPickerModal {
+  #issuerPickerOverlay.open, #rukovPickerOverlay.open { display: flex; }
+  #issuerPickerModal, #rukovPickerModal {
     background: var(--surface); width: 420px; max-width: calc(100vw - 24px);
     border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,.22);
     display: flex; flex-direction: column; max-height: calc(100vh - 100px);
@@ -1253,6 +1266,22 @@
   </div>
 </div>
 
+<!-- Пикер руководителя работ (для аккаунтов-Операторов) -->
+<div id="rukovPickerOverlay" onclick="rukovPickerOverlayClick(event)">
+  <div id="rukovPickerModal">
+    <div class="ipm-header">
+      <h3>Выбор руководителя работ</h3>
+      <button class="ipm-close" onclick="closeRukovPicker()">×</button>
+    </div>
+    <div class="ipm-filter">
+      <select id="rukovPpuFilter" onchange="renderRukovList()">
+        <option value="">Все участки</option>
+      </select>
+    </div>
+    <div class="ipm-list" id="rukovPickerList"></div>
+  </div>
+</div>
+
 <!-- Модальное окно Авторизации -->
 <div id="loginOverlay" onclick="loginOverlayClick(event)">
   <div id="loginModal">
@@ -1299,7 +1328,7 @@
         <label>Отчество <span style="color:var(--gray-400); font-weight:400">(необязательно)</span></label>
         <input type="text" id="regOtchestvo" placeholder="Иванович">
       </div>
-      <div class="lm-field">
+      <div class="lm-field" id="fieldRegDolzh">
         <label>Должность <span style="color:#e05252">*</span></label>
         <input type="text" id="regDolzh" placeholder="Инженер">
       </div>
@@ -1323,6 +1352,20 @@
       <div class="lm-field">
         <label>Эл. почта <span style="color:var(--gray-400); font-weight:400">(необязательно)</span></label>
         <input type="email" id="regEmail" placeholder="example@mail.ru">
+      </div>
+      <div class="lm-field">
+        <label>Как вы будете работать</label>
+        <input type="hidden" id="regType" value="self">
+        <div class="reg-type-toggle">
+          <div class="reg-type-opt active" id="regTypeSelf" onclick="setRegType('self')">
+            <span class="reg-type-title">Наряды на себя</span>
+            <span class="reg-type-desc">Вы — руководитель работ. ФИО и должность будут подставляться в наряд автоматически</span>
+          </div>
+          <div class="reg-type-opt" id="regTypeOperator" onclick="setRegType('operator')">
+            <span class="reg-type-title">Наряды за других</span>
+            <span class="reg-type-desc">Вы оформляете наряды за других сотрудников организации (роль «Оператор»). При заполнении бланка руководителя работ нужно будет выбирать из списка</span>
+          </div>
+        </div>
       </div>
       <div id="regError">Заполните все обязательные поля</div>
       <div id="regSuccess">Заявка отправлена! Ожидайте подтверждения.</div>
@@ -1501,7 +1544,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.20</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.22</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1629,13 +1672,22 @@
 
         <div class="field" id="fieldRukovFio">
           <label>ФИО руководителя работ <span class="req">*</span></label>
-          <input type="text" id="rukovFio" placeholder="Иванов Иван Иванович" oninput="checkButtons()">
+          <div class="issuer-wrap rukov-wrap">
+            <input type="text" id="rukovFio" placeholder="Иванов Иван Иванович" oninput="rukovOnInput()" onkeydown="rukovKeyDown(event)" autocomplete="off">
+            <div class="issuer-ac-list" id="rukovAcList"></div>
+          </div>
           <span class="auth-value" id="rukovFioDisplay"></span>
         </div>
 
         <div class="field" id="fieldRukovDolzh">
           <label>Должность руководителя <span class="req">*</span></label>
-          <input type="text" id="rukovDolzh" placeholder="Мастер, прораб, начальник участка" oninput="checkButtons()">
+          <div style="display:flex;gap:6px;align-items:stretch">
+            <input type="text" id="rukovDolzh" placeholder="Мастер, прораб, начальник участка" oninput="checkButtons()" style="flex:1;min-width:0">
+            <button class="issuer-pick-btn" type="button" id="rukovPickBtn" onclick="openRukovPicker()" title="Выбрать из списка" style="display:none">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Из списка
+            </button>
+          </div>
           <span class="auth-value" id="rukovDolzhDisplay"></span>
         </div>
         <div class="field">
@@ -2097,6 +2149,7 @@ const MASTER_SHEET_ID = '1Thw1FraaXvuqDD_qQ-Bdd-Kbx7JvScSn-iYRD5v3-ts';
 let employeeMap = {};
 let issuersList = [];      // [{fio, dolzh, ppu}] — те, кто может выдавать наряд
 let allEmployeesList = []; // [{fio, dolzh, razr, grEB, grVys, ppu}] — все сотрудники
+let receiversList = [];    // [{fio, dolzh, ppu}] — те, за кого Оператор может оформлять наряд ("Получает" в столбце H)
 
 function _ppuSort(a, b) {
   const aNum = /^\d/.test(a), bNum = /^\d/.test(b);
@@ -2166,7 +2219,24 @@ function switchAuthTab(tab) {
     document.getElementById('regFamiliya')?.focus();
     document.getElementById('regError').style.display = 'none';
     document.getElementById('regSuccess').style.display = 'none';
+    setRegType('self');
     loadOrgDatalist();
+  }
+}
+
+// Выбор типа аккаунта при регистрации: 'self' — обычный сценарий (руководитель
+// работ сам себе), 'operator' — оформляет наряды за других сотрудников;
+// такому аккаунту прописывается должность "Оператор" (см. isOperatorUser()).
+function setRegType(type) {
+  document.getElementById('regType').value = type;
+  document.getElementById('regTypeSelf').classList.toggle('active', type === 'self');
+  document.getElementById('regTypeOperator').classList.toggle('active', type === 'operator');
+  const dolzhField = document.getElementById('fieldRegDolzh');
+  if (type === 'operator') {
+    dolzhField.style.display = 'none';
+    document.getElementById('regDolzh').value = '';
+  } else {
+    dolzhField.style.display = '';
   }
 }
 
@@ -2178,7 +2248,8 @@ async function doRegister() {
   const familiya  = document.getElementById('regFamiliya').value.trim();
   const imya      = document.getElementById('regImya').value.trim();
   const otchestvo = document.getElementById('regOtchestvo').value.trim();
-  const dolzh     = document.getElementById('regDolzh').value.trim();
+  const isOperatorReg = document.getElementById('regType').value === 'operator';
+  const dolzh     = isOperatorReg ? 'Оператор' : document.getElementById('regDolzh').value.trim();
   const org       = document.getElementById('regOrg').value.trim();
   const login     = document.getElementById('regLogin').value.trim();
   const pwd       = document.getElementById('regPassword').value.trim();
@@ -2192,7 +2263,7 @@ async function doRegister() {
   errEl.style.display = 'none';
   okEl.style.display  = 'none';
 
-  if (!familiya || !imya || !dolzh || !org || !login || !pwd) {
+  if (!familiya || !imya || (!isOperatorReg && !dolzh) || !org || !login || !pwd) {
     errEl.textContent = 'Заполните все обязательные поля';
     errEl.style.display = 'block';
     return;
@@ -2258,6 +2329,7 @@ async function doRegister() {
   if (sendOk) {
     ['regFamiliya','regImya','regOtchestvo','regDolzh','regOrg','regLogin','regPassword','regPhone','regEmail']
       .forEach(id => { document.getElementById(id).value = ''; });
+    setRegType('self');
     // Сохраняем как ожидающего пользователя и сразу «входим»
     const pendingUser = { fio, dolzh, org, login, pwd, pending: true };
     currentUser = pendingUser;
@@ -2399,13 +2471,20 @@ function toGuillemets(s) {
   return s.replace(/"([^"]*)"/g, '«$1»');
 }
 
+// Оператор оформляет наряды за других сотрудников — его ФИО/должность
+// не является руководителем работ, поэтому автоподстановка для него отключена.
+function isOperatorUser(user) {
+  return !!(user && (user.dolzh || '').trim().toLowerCase() === 'оператор');
+}
+
 function applyUserToForm() {
   // Pending-пользователи не получают доступ к данным формы
   const activeUser = (currentUser && !currentUser.pending) ? currentUser : null;
+  const isOperator = isOperatorUser(activeUser);
   const fields = {
     fieldOrg:      { input: 'org',       display: 'orgDisplay',       value: activeUser ? toGuillemets(activeUser.org) : null },
-    fieldRukovFio: { input: 'rukovFio',  display: 'rukovFioDisplay',  value: activeUser ? activeUser.fio   : null },
-    fieldRukovDolzh:{ input: 'rukovDolzh', display: 'rukovDolzhDisplay', value: activeUser ? activeUser.dolzh : null },
+    fieldRukovFio: { input: 'rukovFio',  display: 'rukovFioDisplay',  value: (activeUser && !isOperator) ? activeUser.fio   : null },
+    fieldRukovDolzh:{ input: 'rukovDolzh', display: 'rukovDolzhDisplay', value: (activeUser && !isOperator) ? activeUser.dolzh : null },
   };
   for (const [fieldId, cfg] of Object.entries(fields)) {
     const field   = document.getElementById(fieldId);
@@ -2420,6 +2499,8 @@ function applyUserToForm() {
       field.classList.remove('auth-locked');
     }
   }
+  const rukovBtn = document.getElementById('rukovPickBtn');
+  if (rukovBtn) rukovBtn.style.display = isOperator ? 'flex' : 'none';
   checkButtons();
 }
 
@@ -3098,6 +3179,151 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.issuer-wrap')) closeIssuerAc();
 });
 
+// ─── Пикер / автодополнение руководителя работ (для аккаунтов-Операторов) ──
+
+function rukovFavKey() {
+  return 'rukov_favs_' + (currentUser ? currentUser.org : '_');
+}
+function rukovFavs() {
+  try { return JSON.parse(localStorage.getItem(rukovFavKey()) || '[]'); } catch { return []; }
+}
+function rukovFavToggle(fio) {
+  let favs = rukovFavs();
+  const idx = favs.indexOf(fio);
+  if (idx >= 0) favs.splice(idx, 1); else favs.push(fio);
+  localStorage.setItem(rukovFavKey(), JSON.stringify(favs));
+}
+
+function rebuildRukovPpuFilter() {
+  const sel = document.getElementById('rukovPpuFilter');
+  if (!sel) return;
+  const ppus = [...new Set(receiversList.map(p => p.ppu).filter(Boolean))];
+  ppus.sort(_ppuSort);
+  sel.innerHTML = '<option value="">Все участки</option>' +
+    ppus.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+function openRukovPicker() {
+  if (!currentUser) { openLoginModal(); return; }
+  if (!receiversList.length) { openNoEmployeeDataModal(); return; }
+  renderRukovList();
+  document.getElementById('rukovPickerOverlay').classList.add('open');
+}
+function closeRukovPicker() {
+  document.getElementById('rukovPickerOverlay').classList.remove('open');
+}
+function rukovPickerOverlayClick(e) {
+  if (e.target === document.getElementById('rukovPickerOverlay')) closeRukovPicker();
+}
+
+function renderRukovList() {
+  const list = document.getElementById('rukovPickerList');
+  const ppuF = document.getElementById('rukovPpuFilter').value;
+  const favs = rukovFavs();
+
+  let items = receiversList.filter(p => !ppuF || p.ppu === ppuF);
+  const favItems   = items.filter(p => favs.includes(p.fio));
+  const otherItems = items.filter(p => !favs.includes(p.fio));
+
+  let html = '';
+  if (favItems.length) {
+    html += `<div class="ipm-section-label">⭐ Избранные</div>`;
+    favItems.forEach(p => { html += rukovItemHtml(p, true); });
+  }
+  if (otherItems.length) {
+    if (favItems.length) html += `<div class="ipm-section-label">Все</div>`;
+    otherItems.forEach(p => { html += rukovItemHtml(p, false); });
+  }
+  if (!items.length) html = `<div class="ipm-empty">Нет сотрудников, доступных для выбора</div>`;
+  list.innerHTML = html;
+}
+
+function rukovItemHtml(p, isFav) {
+  const fioE   = p.fio.replace(/"/g, '&quot;');
+  const dolzhE = (p.dolzh || '').replace(/"/g, '&quot;');
+  return `<div class="ipm-item" onclick="selectRukov('${fioE}','${dolzhE}')">
+    <button class="ipm-star ${isFav ? 'on' : ''}" title="Избранное"
+      onclick="event.stopPropagation();toggleRukovFav('${fioE}',this)">★</button>
+    <div class="ipm-info">
+      <div class="ipm-fio">${p.fio}</div>
+      ${p.dolzh ? `<div class="ipm-dolzh">${p.dolzh}</div>` : ''}
+      ${p.ppu   ? `<div class="ipm-ppu">${p.ppu}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function toggleRukovFav(fio, btn) {
+  rukovFavToggle(fio);
+  renderRukovList();
+}
+
+function selectRukov(fio, dolzh) {
+  document.getElementById('rukovFio').value   = fio;
+  document.getElementById('rukovDolzh').value = dolzh;
+  checkButtons();
+  closeRukovPicker();
+  closeRukovAc();
+}
+
+// ── Автодополнение ──────────────────────────────────────────────────────
+let _rukovAcIdx = -1;
+
+function rukovOnInput() {
+  checkButtons();
+  const q = document.getElementById('rukovFio').value.trim().toLowerCase();
+  if (!q || !receiversList.length) { closeRukovAc(); return; }
+
+  const matches = receiversList
+    .filter(p => p.fio.toLowerCase().includes(q))
+    .slice(0, 12);
+
+  if (!matches.length) { closeRukovAc(); return; }
+
+  _rukovAcIdx = -1;
+  const el = document.getElementById('rukovAcList');
+  el.innerHTML = matches.map((p, i) =>
+    `<div class="issuer-ac-item" data-i="${i}"
+      onmousedown="selectRukov('${p.fio.replace(/'/g,"\\'")}','${(p.dolzh||'').replace(/'/g,"\\'")}')">
+      <span class="issuer-ac-fio">${p.fio}</span>
+      ${p.dolzh ? `<span class="issuer-ac-dolzh">${p.dolzh}</span>` : ''}
+    </div>`
+  ).join('');
+  el.classList.add('open');
+}
+
+function rukovKeyDown(e) {
+  const el = document.getElementById('rukovAcList');
+  if (!el.classList.contains('open')) return;
+  const items = el.querySelectorAll('.issuer-ac-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _rukovAcIdx = Math.min(_rukovAcIdx + 1, items.length - 1);
+    items.forEach((it, i) => it.classList.toggle('active', i === _rukovAcIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _rukovAcIdx = Math.max(_rukovAcIdx - 1, 0);
+    items.forEach((it, i) => it.classList.toggle('active', i === _rukovAcIdx));
+  } else if (e.key === 'Enter' || e.key === 'Tab') {
+    if (_rukovAcIdx >= 0 && items[_rukovAcIdx]) {
+      e.preventDefault();
+      items[_rukovAcIdx].dispatchEvent(new MouseEvent('mousedown'));
+    } else {
+      closeRukovAc();
+    }
+  } else if (e.key === 'Escape') {
+    closeRukovAc();
+  }
+}
+
+function closeRukovAc() {
+  document.getElementById('rukovAcList').classList.remove('open');
+  _rukovAcIdx = -1;
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.rukov-wrap')) closeRukovAc();
+});
+
 // Сбрасывает базу сотрудников/оргданные в пустое состояние — вызывается,
 // когда лист организации не найден или пришли нераспознаваемые данные,
 // чтобы пикеры показывали «База сотрудников недоступна», а не чужие/старые данные.
@@ -3105,6 +3331,7 @@ function _resetOrgPersonnelData() {
   employeeMap = {};
   issuersList = [];
   allEmployeesList = [];
+  receiversList = [];
   orgDangers = [];
   orgStaticData = { p3: null, p4rows: [], p5rows: [] };
   orgRooms = {};
@@ -3112,6 +3339,7 @@ function _resetOrgPersonnelData() {
   orgApplicationTypes = [];
   rebuildIssuerPpuFilter();
   rebuildCrewPpuFilter();
+  rebuildRukovPpuFilter();
   updateCrewPickerBtn();
   renderCustomCheckboxes();
 }
@@ -3138,6 +3366,14 @@ function loadOrgPersonnel() {
       employeeMap = {};
       issuersList = [];
       allEmployeesList = [];
+      receiversList = [];
+      // У Операторов свой маркер выдающего наряд в столбце H — "Выдает" (а не
+      // "да", которым отмечаются выдающие для обычных аккаунтов). В ячейке
+      // может быть указано сразу несколько маркеров через запятую или пробел
+      // (например, "Выдает, Получает" — сотрудник и выдаёт, и может быть
+      // выбран руководителем работ), поэтому разбираем ячейку на токены.
+      const _isOperatorLoad = isOperatorUser(currentUser);
+      const _issuerMarker = _isOperatorLoad ? 'выдает' : 'да';
       for (let i = 1; i < rows.length; i++) {
         const r = rows[i];
         const fio = ((iFIO >= 0 ? r[iFIO] : r[1]) || '').trim();
@@ -3146,11 +3382,14 @@ function loadOrgPersonnel() {
         const razr     = ((iRazr  >= 0 ? r[iRazr]  : r[3]) || '').trim();
         const grEB     = ((iGrEB  >= 0 ? r[iGrEB]  : r[4]) || '').trim();
         const ppu      = ((iPPU   >= 0 ? r[iPPU]   : r[6]) || '').trim();
-        const canIssue = ((iIssue >= 0 ? r[iIssue] : r[7]) || '').trim().toLowerCase();
+        const canIssueTokens = ((iIssue >= 0 ? r[iIssue] : r[7]) || '').trim().toLowerCase().split(/[,\s]+/).filter(Boolean);
         employeeMap[fio.toLowerCase().replace(/\s+/g, ' ')] = { dolzh, razr, grEB };
         const grVys = ((iGrVys >= 0 ? r[iGrVys] : '') || '').trim() || '2';
         allEmployeesList.push({ fio, dolzh, razr, grEB, grVys, ppu });
-        if (canIssue === 'да') issuersList.push({ fio, dolzh, ppu });
+        if (canIssueTokens.includes(_issuerMarker)) issuersList.push({ fio, dolzh, ppu });
+        // "Получает" среди токенов той же колонки — сотрудник может быть выбран
+        // Оператором как руководитель работ (см. rukovPicker / receiversList).
+        if (canIssueTokens.includes('получает')) receiversList.push({ fio, dolzh, ppu });
       }
       orgDangers = [];
       if (iDName >= 0) {
@@ -3227,8 +3466,10 @@ function loadOrgPersonnel() {
 
       issuersList.sort((a, b) => a.fio.localeCompare(b.fio, 'ru'));
       allEmployeesList.sort((a, b) => a.fio.localeCompare(b.fio, 'ru'));
+      receiversList.sort((a, b) => a.fio.localeCompare(b.fio, 'ru'));
       rebuildIssuerPpuFilter();
       rebuildCrewPpuFilter();
+      rebuildRukovPpuFilter();
       updateCrewPickerBtn();
       renderCustomCheckboxes();
       // Восстановить состояния чекбоксов из orgDangers после асинхронной загрузки Sheets
@@ -3976,7 +4217,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.20';
+const CURRENT_VERSION = 'v3.22';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5437,6 +5678,20 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.22', date: '02.07.2026',
+    changes: [
+      'Для аккаунтов-Операторов список выдающих наряд теперь берётся по отдельной отметке «Выдает» в базе сотрудников (вместо «да»)',
+      'Один сотрудник теперь может быть отмечен сразу несколькими ролями в одной ячейке (например, «Выдает, Получает»)',
+    ]
+  },
+  {
+    version: 'v3.21', date: '02.07.2026',
+    changes: [
+      'При регистрации добавлен выбор: делать наряды на себя или оформлять их за других сотрудников (роль «Оператор»)',
+      'Для аккаунтов-Операторов ФИО и должность руководителя работ теперь выбираются из списка сотрудников, а не подставляются автоматически',
+    ]
+  },
   {
     version: 'v3.20', date: '02.07.2026',
     changes: [
