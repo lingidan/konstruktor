@@ -1497,7 +1497,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.10</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.11</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3949,7 +3949,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.10';
+const CURRENT_VERSION = 'v3.11';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5369,6 +5369,12 @@ async function buildOgnevoyDocument(data) {
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
   {
+    version: 'v3.11', date: '02.07.2026',
+    changes: [
+      'Значения «С применением» вставляются без изменения регистра — аббревиатуры (УШМ, рЭДС) сохраняются как есть',
+    ]
+  },
+  {
     version: 'v3.10', date: '02.07.2026',
     changes: [
       '«С применением» объединено с «Вид работ» в одно поле: виды через запятую, первый с заглавной, далее «с применением» и факторы строчными',
@@ -6782,7 +6788,7 @@ function _wtpBuildValue() {
   }
   if (apps.length) {
     result += (result ? ' с применением ' : 'С применением ');
-    result += apps.map(a => a.charAt(0).toLowerCase() + a.slice(1)).join(', ');
+    result += apps.join(', ');
   }
   return result;
 }
