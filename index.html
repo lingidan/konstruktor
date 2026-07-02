@@ -1501,7 +1501,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.17</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.20</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1660,7 +1660,7 @@
         <div class="field col-span-2">
           <label>Вид работ <span class="req">*</span></label>
           <div style="display:flex;gap:6px;align-items:stretch">
-            <input type="text" id="vidRabot" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0">
+            <textarea id="vidRabot" rows="3" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0;resize:vertical;font-family:inherit;font-size:14px;padding:9px 12px;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius);color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(46,122,191,.18)'" onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
             <button type="button" onclick="openWorkTypePicker()" title="Выбрать вид работ из списка"
               style="flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:background .15s,color .15s"
               onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--accent-light)';this.style.color='var(--accent)'">
@@ -3098,6 +3098,24 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.issuer-wrap')) closeIssuerAc();
 });
 
+// Сбрасывает базу сотрудников/оргданные в пустое состояние — вызывается,
+// когда лист организации не найден или пришли нераспознаваемые данные,
+// чтобы пикеры показывали «База сотрудников недоступна», а не чужие/старые данные.
+function _resetOrgPersonnelData() {
+  employeeMap = {};
+  issuersList = [];
+  allEmployeesList = [];
+  orgDangers = [];
+  orgStaticData = { p3: null, p4rows: [], p5rows: [] };
+  orgRooms = {};
+  orgWorkTypes = [];
+  orgApplicationTypes = [];
+  rebuildIssuerPpuFilter();
+  rebuildCrewPpuFilter();
+  updateCrewPickerBtn();
+  renderCustomCheckboxes();
+}
+
 function loadOrgPersonnel() {
   if (!currentUser) return;
   const org = currentUser.org;
@@ -3105,9 +3123,11 @@ function loadOrgPersonnel() {
 
   const _doLoad = csv => {
       const rows = _parseSheetCSV(csv);
-      if (rows.length < 2) return;
-      const hdrs = rows[0].map(h => (h || '').toLowerCase());
+      const hdrs = rows.length ? rows[0].map(h => (h || '').toLowerCase()) : [];
       const iFIO   = hdrs.findIndex(h => h.includes('фио') || h.includes('ф.и.о'));
+      // Если строк меньше двух или нет колонки ФИО — это не лист организации
+      // (например, Google вернул запасной/чужой лист вместо несуществующего).
+      if (rows.length < 2 || iFIO < 0) { _resetOrgPersonnelData(); return; }
       const iDolzh = hdrs.findIndex(h => h.includes('должн'));
       const iRazr  = hdrs.findIndex(h => h.includes('разряд') || h.includes('профессия'));
       const iGrEB  = hdrs.findIndex(h => h.includes('группа') && (h.includes('эб') || h.includes('эл')));
@@ -3238,7 +3258,10 @@ function loadOrgPersonnel() {
       try { sessionStorage.setItem(_ssKey, csv); } catch(e) {}
       _doLoad(csv);
     })
-    .catch(() => console.warn('Не удалось загрузить сотрудников организации:', org));
+    .catch(() => {
+      console.warn('Не удалось загрузить сотрудников организации:', org);
+      _resetOrgPersonnelData();
+    });
 }
 
 function syncAllRows() {
@@ -3953,7 +3976,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.17';
+const CURRENT_VERSION = 'v3.20';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -3964,23 +3987,65 @@ function _parseVer(s) {
   return m ? parseInt(m[1]) * 1000 + parseInt(m[2]) : 0;
 }
 
+let _versionBannerShown = false;
+
+function showUpdateBanner(remoteVersion, autoReloadMs) {
+  if (_versionBannerShown) return;
+  _versionBannerShown = true;
+  const bar = document.createElement('div');
+  bar.id = 'updateBanner';
+  bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--accent);color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:center;gap:14px;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.15)';
+  const msg = autoReloadMs
+    ? `Версия устарела — обновляем страницу до ${remoteVersion}...`
+    : `Доступна новая версия ${remoteVersion} — обновите страницу, чтобы получить последние исправления`;
+  bar.innerHTML = `<span>${msg}</span>` + (autoReloadMs ? '' :
+    `<button id="updateBannerBtn" style="background:rgba(255,255,255,.22);border:none;color:white;border-radius:6px;padding:5px 14px;cursor:pointer;font-size:13px;font-weight:700">Обновить</button>`);
+  document.body.appendChild(bar);
+  if (autoReloadMs) {
+    setTimeout(() => location.reload(true), autoReloadMs);
+  } else {
+    document.getElementById('updateBannerBtn').onclick = () => location.reload(true);
+  }
+}
+
+async function _fetchRemoteVersion() {
+  const _ctrl = new AbortController();
+  const _vt = setTimeout(() => _ctrl.abort(), 3000);
+  try {
+    const res = await fetch('https://lingidan.github.io/konstruktor/', { cache: 'no-store', signal: _ctrl.signal });
+    const html = await res.text();
+    const match = html.match(/>(v\d+\.\d+)<\/div>/);
+    return match ? match[1] : null;
+  } finally {
+    clearTimeout(_vt);
+  }
+}
+
+// Фоновая проверка версии — не блокирует работу, просто показывает баннер
+async function checkVersionBackground() {
+  try {
+    const remoteVersion = await _fetchRemoteVersion();
+    if (remoteVersion && _parseVer(remoteVersion) > _parseVer(CURRENT_VERSION)) {
+      showUpdateBanner(remoteVersion);
+    }
+  } catch (e) {
+    // Тихо игнорируем сетевые ошибки
+  }
+}
+setTimeout(checkVersionBackground, 2000);
+setInterval(checkVersionBackground, 10 * 60 * 1000);
+
 async function ensureActualVersion() {
   const now = Date.now();
   if (_versionCheckPassed && _versionCheckTime && (now - _versionCheckTime) < VERSION_CHECK_TTL) {
     return true;
   }
   try {
-    const _ctrl = new AbortController();
-    const _vt = setTimeout(() => _ctrl.abort(), 3000);
-    const res = await fetch('https://lingidan.github.io/konstruktor/', { cache: 'no-store', signal: _ctrl.signal });
-    clearTimeout(_vt);
-    const html = await res.text();
-    const match = html.match(/>(v\d+\.\d+)<\/div>/);
-    const remoteVersion = match ? match[1] : null;
+    const remoteVersion = await _fetchRemoteVersion();
     // Перезагружаем ТОЛЬКО если на сервере версия НОВЕЕ текущей
     if (remoteVersion && _parseVer(remoteVersion) > _parseVer(CURRENT_VERSION)) {
       sessionStorage.setItem('pendingDownload', _pendingDownload || '');
-      location.reload(true);
+      showUpdateBanner(remoteVersion, 1200);
       return false;
     }
     _versionCheckPassed = true;
@@ -5372,6 +5437,24 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.20', date: '02.07.2026',
+    changes: [
+      'Исправлен критический баг: если у организации нет своего листа в базе, пикер исполнителей (Блок 3) больше не показывает чужие/старые данные — теперь корректно выводится сообщение «База сотрудников недоступна»',
+    ]
+  },
+  {
+    version: 'v3.19', date: '02.07.2026',
+    changes: [
+      'Проверка обновлений теперь работает в фоне: при выходе новой версии показывается уведомление с кнопкой «Обновить», без внезапной перезагрузки страницы',
+    ]
+  },
+  {
+    version: 'v3.18', date: '02.07.2026',
+    changes: [
+      'Поле «Вид работ» теперь растягивается по высоте, как поле «Место выполнения работ»',
+    ]
+  },
   {
     version: 'v3.17', date: '02.07.2026',
     changes: [
