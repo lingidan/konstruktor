@@ -1497,7 +1497,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.09</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.10</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1658,19 +1658,6 @@
           <div style="display:flex;gap:6px;align-items:stretch">
             <input type="text" id="vidRabot" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0">
             <button type="button" onclick="openWorkTypePicker()" title="Выбрать вид работ из списка"
-              style="flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:background .15s,color .15s"
-              onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--accent-light)';this.style.color='var(--accent)'">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-              Из списка
-            </button>
-          </div>
-        </div>
-
-        <div class="field col-span-2">
-          <label>С применением</label>
-          <div style="display:flex;gap:6px;align-items:stretch">
-            <input type="text" id="primenenie" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0">
-            <button type="button" onclick="openWorkTypePicker('primenenie')" title="Выбрать из списка"
               style="flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:background .15s,color .15s"
               onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--accent-light)';this.style.color='var(--accent)'">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -2092,7 +2079,6 @@ function collectFormData() {
     soglasov:    orgDangers.some(f => f.name.toLowerCase().includes('земл') && document.getElementById(f.id)?.checked) ? '' : 'Не требуется',
     mesto:       document.getElementById('mesto').value.trim(),
     vidRabot:    document.getElementById('vidRabot').value.trim(),
-    primenenie:  document.getElementById('primenenie')?.value.trim() || '',
     // Блок 2 — факторы с текстами п.3/п.4/п.5
     activeFactors,
     // Блок 3 — исполнители
@@ -3963,7 +3949,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.09';
+const CURRENT_VERSION = 'v3.10';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -4733,7 +4719,7 @@ function clearCurrentTab() {
 
 function clearFormUI(withRows) {
   ['org','nomer','dateStart','nomerOgn','ppr','naradVydalDolzh','naradVydalFio',
-   'naradVydal','rukovDolzh','rukovFio','utvPprv','mesto','vidRabot','primenenie'].forEach(id => {
+   'naradVydal','rukovDolzh','rukovFio','utvPprv','mesto','vidRabot'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   orgDangers.forEach(f => { const el = document.getElementById(f.id); if (el) el.checked = false; });
@@ -4775,7 +4761,6 @@ function saveFormData() {
     utvPprv:    document.getElementById('utvPprv').value,
     mesto:      document.getElementById('mesto').value,
     vidRabot:   document.getElementById('vidRabot').value,
-    primenenie: document.getElementById('primenenie')?.value || '',
     sec6Rows:   document.getElementById('sec6Rows').value,
     sec10Rows:  document.getElementById('sec10Rows').value,
     cbStates,
@@ -4806,7 +4791,7 @@ function _formSnapshot() {
     vidOgn: g('vidOgn'), nomerOgn: g('nomerOgn'), ppr: g('ppr'),
     naradVydalDolzh: g('naradVydalDolzh'), naradVydalFio: g('naradVydalFio'),
     rukovDolzh: g('rukovDolzh'), rukovFio: g('rukovFio'),
-    utvPprv: g('utvPprv'), mesto: g('mesto'), vidRabot: g('vidRabot'), primenenie: g('primenenie'),
+    utvPprv: g('utvPprv'), mesto: g('mesto'), vidRabot: g('vidRabot'),
     sec6Rows: g('sec6Rows'), sec10Rows: g('sec10Rows'),
     cbStates, execRows
   };
@@ -4820,7 +4805,7 @@ function _applySnapshot(snap) {
   set('naradVydalDolzh', snap.naradVydalDolzh); set('naradVydalFio', snap.naradVydalFio);
   updateNaradVydal();
   set('rukovDolzh', snap.rukovDolzh); set('rukovFio', snap.rukovFio);
-  set('utvPprv', snap.utvPprv); set('mesto', snap.mesto); set('vidRabot', snap.vidRabot); set('primenenie', snap.primenenie);
+  set('utvPprv', snap.utvPprv); set('mesto', snap.mesto); set('vidRabot', snap.vidRabot);
   set('sec6Rows', snap.sec6Rows); set('sec10Rows', snap.sec10Rows);
   if (snap.dateStart) setEndDate();
   const sr6 = document.getElementById('sec6RowsValue');
@@ -4931,7 +4916,6 @@ function loadFormData() {
   set('utvPprv',    snap.utvPprv);
   set('mesto',      snap.mesto);
   set('vidRabot',   snap.vidRabot);
-  set('primenenie', snap.primenenie);
   set('sec6Rows',   snap.sec6Rows);
   set('sec10Rows',  snap.sec10Rows);
 
@@ -5384,6 +5368,12 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.10', date: '02.07.2026',
+    changes: [
+      '«С применением» объединено с «Вид работ» в одно поле: виды через запятую, первый с заглавной, далее «с применением» и факторы строчными',
+    ]
+  },
   {
     version: 'v3.09', date: '02.07.2026',
     changes: [
@@ -6760,31 +6750,58 @@ function saveRoomListPopup() {
 }
 
 /* ── Work Type Picker JS ── */
-let _wtpSelected = new Set();
+let _wtpSelected    = new Set(); // виды работ
+let _wtpAppSelected = new Set(); // с применением
 let _wtpTab = 'vidRabot'; // 'vidRabot' | 'primenenie'
 
-function openWorkTypePicker(tab) {
+// Разбираем текущее значение поля vidRabot обратно в два набора
+function _wtpParseField() {
+  const raw = (document.getElementById('vidRabot')?.value || '').trim();
+  const SEP = ' с применением ';
+  const sepIdx = raw.toLowerCase().indexOf(SEP.toLowerCase());
+  let vidPart = raw, appPart = '';
+  if (sepIdx !== -1) {
+    vidPart = raw.slice(0, sepIdx);
+    appPart = raw.slice(sepIdx + SEP.length);
+  }
+  _wtpSelected    = new Set(vidPart ? vidPart.split(',').map(s => s.trim()).filter(Boolean) : []);
+  _wtpAppSelected = new Set(appPart ? appPart.split(',').map(s => s.trim()).filter(Boolean) : []);
+}
+
+// Собираем одну строку из обоих наборов
+function _wtpBuildValue() {
+  const vids = [..._wtpSelected];
+  const apps = [..._wtpAppSelected];
+  let result = '';
+  if (vids.length) {
+    // Первый — с заглавной буквы, остальные — со строчной
+    result = vids.map((v, i) => i === 0
+      ? v.charAt(0).toUpperCase() + v.slice(1)
+      : v.charAt(0).toLowerCase() + v.slice(1)
+    ).join(', ');
+  }
+  if (apps.length) {
+    result += (result ? ' с применением ' : 'С применением ');
+    result += apps.map(a => a.charAt(0).toLowerCase() + a.slice(1)).join(', ');
+  }
+  return result;
+}
+
+function _wtpCurrentSet() {
+  return _wtpTab === 'primenenie' ? _wtpAppSelected : _wtpSelected;
+}
+
+function openWorkTypePicker() {
   if (!currentUser) { openLoginModal(); return; }
-  _wtpTab = tab || 'vidRabot';
-  const cur = (document.getElementById(_wtpTab)?.value || '').trim();
-  _wtpSelected = new Set(cur ? cur.split(/[,\n]/).map(s => s.trim()).filter(Boolean) : []);
+  _wtpParseField();
   document.getElementById('workTypePopup').style.display = 'block';
   document.body.style.overflow = 'hidden';
   document.getElementById('wtpSearch').value = '';
-  wtpSwitchTab(_wtpTab, true);
+  wtpSwitchTab('vidRabot', true);
 }
 
-function wtpSwitchTab(tab, skipReload) {
-  if (!skipReload && _wtpTab !== tab) {
-    // Сохраняем выбранное в текущее поле перед переключением
-    const el = document.getElementById(_wtpTab);
-    if (el) { el.value = Array.from(_wtpSelected).join(', '); el.dispatchEvent(new Event('input')); }
-  }
+function wtpSwitchTab(tab, skipStyleUpdate) {
   _wtpTab = tab;
-  // Читаем текущее значение нового поля
-  const cur = (document.getElementById(tab)?.value || '').trim();
-  _wtpSelected = new Set(cur ? cur.split(/[,\n]/).map(s => s.trim()).filter(Boolean) : []);
-  // Обновляем стиль вкладок
   const isVid = tab === 'vidRabot';
   const tabVid = document.getElementById('wtpTabVid');
   const tabApp = document.getElementById('wtpTabApp');
@@ -6814,12 +6831,12 @@ function wtpToggleFav(btn, val) {
   if (favs.has(val)) { favs.delete(val); btn.textContent = '☆'; btn.style.color = 'var(--gray-400)'; btn.title = 'Добавить в избранное'; }
   else               { favs.add(val);    btn.textContent = '★'; btn.style.color = '#f5a623';           btn.title = 'Убрать из избранного'; }
   _wtpFavSave(favs);
-  // Перерисовываем список не сбрасывая чекбоксы
   wtpUpdate();
 }
 
-function _wtpItemHtml(v, i, isFav, isFirst) {
-  const sel = _wtpSelected.has(v);
+function _wtpItemHtml(v, isFav, isFirst) {
+  const cur = _wtpCurrentSet();
+  const sel = cur.has(v);
   const esc = v.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
   const border = isFirst ? '' : 'border-top:1px solid var(--border);';
   return `<label style="display:flex;align-items:flex-start;gap:8px;padding:9px 12px;cursor:pointer;border-radius:7px;${border}${sel ? 'background:var(--accent-light);' : ''}transition:background .12s">
@@ -6834,20 +6851,19 @@ function wtpUpdate() {
   const q    = document.getElementById('wtpSearch').value.trim().toLowerCase();
   const src  = _wtpTab === 'primenenie' ? orgApplicationTypes : orgWorkTypes;
   const favs = _wtpFavLoad();
-  let items = (src && src.length) ? src : [];
+  let items  = (src && src.length) ? src : [];
+  const list = document.getElementById('wtpList');
+
   if (q) {
-    // При поиске — всё в одном списке, избранные со звёздочкой
     items = items.filter(v => v.toLowerCase().includes(q));
-    const list = document.getElementById('wtpList');
     if (!items.length) {
       list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:12px">' + (src && src.length ? 'Ничего не найдено' : 'Список не загружен') + '</div>';
       return;
     }
-    list.innerHTML = items.map((v, i) => _wtpItemHtml(v, i, favs.has(v), i === 0)).join('');
+    list.innerHTML = items.map((v, i) => _wtpItemHtml(v, favs.has(v), i === 0)).join('');
     return;
   }
 
-  const list = document.getElementById('wtpList');
   if (!items.length) {
     list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:12px">Список не загружен</div>';
     return;
@@ -6856,56 +6872,45 @@ function wtpUpdate() {
   const favItems   = items.filter(v => favs.has(v));
   const otherItems = items.filter(v => !favs.has(v));
   let html = '';
-
   if (favItems.length) {
     html += `<div style="padding:5px 12px 3px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:.5px;text-transform:uppercase;">★ Избранное</div>`;
-    html += favItems.map((v, i) => _wtpItemHtml(v, i, true, i === 0)).join('');
-    if (otherItems.length) {
+    html += favItems.map((v, i) => _wtpItemHtml(v, true, i === 0)).join('');
+    if (otherItems.length)
       html += `<div style="padding:5px 12px 3px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:.5px;text-transform:uppercase;margin-top:4px;border-top:2px solid var(--gray-200)">Все</div>`;
-    }
   }
-  html += otherItems.map((v, i) => _wtpItemHtml(v, i, false, i === 0 && !favItems.length)).join('');
+  html += otherItems.map((v, i) => _wtpItemHtml(v, false, i === 0 && !favItems.length)).join('');
   list.innerHTML = html;
 }
 
 function wtpToggle(cb) {
+  const cur = _wtpCurrentSet();
   const value = cb.dataset.val;
-  if (cb.checked) { _wtpSelected.add(value); } else { _wtpSelected.delete(value); }
+  if (cb.checked) { cur.add(value); } else { cur.delete(value); }
   const label = cb.closest('label');
-  const span = label.querySelector('span');
-  if (cb.checked) {
-    label.style.background = 'var(--accent-light)';
-    span.style.color = 'var(--accent)';
-    span.style.fontWeight = '600';
-  } else {
-    label.style.background = '';
-    span.style.color = 'var(--text)';
-    span.style.fontWeight = '400';
-  }
+  const span  = label.querySelector('span');
+  if (cb.checked) { label.style.background = 'var(--accent-light)'; span.style.color = 'var(--accent)'; span.style.fontWeight = '600'; }
+  else            { label.style.background = '';                     span.style.color = 'var(--text)';   span.style.fontWeight = '400'; }
   wtpUpdateFooter();
 }
 
 function wtpUpdateFooter() {
-  const cnt = _wtpSelected.size;
+  const cnt = _wtpSelected.size + _wtpAppSelected.size;
   const btn = document.getElementById('wtpApply');
   if (btn) {
     btn.textContent = cnt > 0 ? `Применить (${cnt})` : 'Применить';
-    btn.disabled = cnt === 0;
+    btn.disabled    = cnt === 0;
     btn.style.opacity = cnt === 0 ? '0.45' : '';
   }
 }
 
 function wtpApply() {
-  const el = document.getElementById(_wtpTab);
-  if (el) {
-    el.value = Array.from(_wtpSelected).join(', ');
-    el.dispatchEvent(new Event('input'));
-  }
+  const el = document.getElementById('vidRabot');
+  if (el) { el.value = _wtpBuildValue(); el.dispatchEvent(new Event('input')); }
   closeWorkTypePicker();
 }
 
 function wtpClear() {
-  _wtpSelected.clear();
+  _wtpCurrentSet().clear();
   wtpUpdate();
   wtpUpdateFooter();
 }
