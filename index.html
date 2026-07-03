@@ -1417,7 +1417,7 @@
 </div>
 
 <!-- Модальное окно «Заявки на регистрацию» -->
-<div id="adminRegOverlay" onclick="if(event.target===this)closeAdminRegPanel()"
+<div id="adminRegOverlay"
      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:980;
             justify-content:center;align-items:center;">
   <div style="background:var(--surface);width:640px;max-width:calc(100vw - 24px);
@@ -1434,7 +1434,7 @@
 </div>
 
 <!-- Модальное окно «Управление аккаунтами» -->
-<div id="accountsOverlay" onclick="if(event.target===this)closeAccountsPanel()"
+<div id="accountsOverlay"
      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:980;
             justify-content:center;align-items:center;">
   <div style="background:var(--surface);width:700px;max-width:calc(100vw - 24px);
@@ -1572,7 +1572,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.26</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.27</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2691,53 +2691,84 @@ function _renderAccounts(users) {
     body.innerHTML = '<div style="text-align:center;color:var(--gray-400);padding:40px 0;">Ничего не найдено</div>';
     return;
   }
-  body.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead>
-        <tr style="background:var(--gray-50);border-bottom:2px solid var(--gray-200);">
-          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--gray-700);">ФИО</th>
-          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--gray-700);">Логин</th>
-          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--gray-700);">Организация</th>
-          <th style="padding:10px 8px;text-align:left;font-weight:600;color:var(--gray-700);"></th>
-        </tr>
-      </thead>
-      <tbody>
-        ${users.map((u, i) => `
-          <tr style="border-bottom:1px solid var(--gray-200);" id="accRow${i}">
-            <td style="padding:10px 14px;">
-              <div style="font-weight:600;color:var(--navy);">${_esc(u.fio)}</div>
-              <div style="font-size:11px;color:var(--gray-400);">${_esc(u.dolzh)}</div>
-            </td>
-            <td style="padding:10px 14px;color:var(--gray-700);font-family:monospace;">${_esc(u.login)}</td>
-            <td style="padding:10px 14px;color:var(--gray-600);font-size:12px;">${_esc(u.org)}</td>
-            <td style="padding:10px 8px;text-align:right;">
-              <button onclick="promptResetPwd('${_esc(u.login)}', ${i})"
-                style="padding:6px 12px;font-size:12px;font-weight:600;background:white;color:var(--navy);
-                       border:1.5px solid var(--navy);border-radius:6px;cursor:pointer;white-space:nowrap;">
-                Сбросить пароль
-              </button>
-              <div id="accMsg${i}" style="font-size:11px;font-weight:600;margin-top:4px;display:none;"></div>
-            </td>
-          </tr>`).join('')}
-      </tbody>
-    </table>`;
+  body.innerHTML = `<div style="display:flex;flex-direction:column;gap:0;">
+    ${users.map((u, i) => `
+      <div style="padding:14px 20px;border-bottom:1px solid var(--gray-200);">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:160px;">
+            <div style="font-weight:600;color:var(--navy);font-size:13px;">${_esc(u.fio)}</div>
+            <div style="font-size:11px;color:var(--gray-400);margin-top:1px;">${_esc(u.dolzh)}</div>
+          </div>
+          <div style="min-width:110px;">
+            <div style="font-size:10px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">Логин</div>
+            <div style="font-family:monospace;font-size:13px;color:var(--gray-700);">${_esc(u.login)}</div>
+          </div>
+          <div style="min-width:120px;flex:1;">
+            <div style="font-size:10px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">Организация</div>
+            <div style="font-size:12px;color:var(--gray-600);">${_esc(u.org)}</div>
+          </div>
+          <button onclick="toggleResetForm(${i})"
+            style="padding:7px 14px;font-size:12px;font-weight:600;background:white;color:var(--navy);
+                   border:1.5px solid var(--navy);border-radius:7px;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+            Сбросить пароль
+          </button>
+        </div>
+        <div id="accForm${i}" style="display:none;margin-top:12px;padding:12px;background:var(--gray-50);border-radius:8px;border:1px solid var(--gray-200);">
+          <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px;">Новый пароль для «${_esc(u.login)}»</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input id="accPwd${i}" type="text" placeholder="Введите новый пароль"
+              style="flex:1;padding:8px 11px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;"
+              onkeydown="if(event.key==='Enter')doResetPwd('${_esc(u.login)}',${i})">
+            <button onclick="doResetPwd('${_esc(u.login)}',${i})"
+              style="padding:8px 16px;font-size:13px;font-weight:600;background:var(--navy);color:white;
+                     border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">
+              Сохранить
+            </button>
+            <button onclick="toggleResetForm(${i})"
+              style="padding:8px 10px;font-size:13px;background:white;color:var(--gray-500);
+                     border:1.5px solid var(--gray-200);border-radius:6px;cursor:pointer;">
+              ✕
+            </button>
+          </div>
+          <div id="accMsg${i}" style="font-size:12px;font-weight:600;margin-top:8px;display:none;"></div>
+        </div>
+      </div>`).join('')}
+  </div>`;
 }
 
-async function promptResetPwd(login, i) {
-  const newPwd = prompt('Новый пароль для «' + login + '»:');
-  if (!newPwd || !newPwd.trim()) return;
-  if (newPwd.trim().length < 4) { alert('Пароль должен быть не короче 4 символов.'); return; }
+function toggleResetForm(i) {
+  const form = document.getElementById('accForm' + i);
+  const isVisible = form.style.display !== 'none';
+  form.style.display = isVisible ? 'none' : 'block';
+  if (!isVisible) {
+    document.getElementById('accPwd' + i).focus();
+    document.getElementById('accMsg' + i).style.display = 'none';
+  }
+}
 
+async function doResetPwd(login, i) {
+  const inp = document.getElementById('accPwd' + i);
+  const newPwd = (inp?.value || '').trim();
   const msgEl = document.getElementById('accMsg' + i);
+
+  if (!newPwd) { inp.focus(); return; }
+  if (newPwd.length < 4) {
+    msgEl.style.color = '#dc2626';
+    msgEl.textContent = 'Пароль должен быть не короче 4 символов';
+    msgEl.style.display = 'block';
+    return;
+  }
+
   msgEl.style.color = 'var(--gray-400)';
   msgEl.textContent = 'Сохранение…';
   msgEl.style.display = 'block';
 
   try {
-    const res = await _apiCall({ action: 'resetPassword', token: _authToken(), login, newPwd: newPwd.trim() });
+    const res = await _apiCall({ action: 'resetPassword', token: _authToken(), login, newPwd });
     if (res.ok) {
       msgEl.style.color = '#28a745';
       msgEl.textContent = '✓ Пароль установлен';
+      inp.value = '';
     } else {
       msgEl.style.color = '#dc2626';
       msgEl.textContent = 'Ошибка: ' + (res.error || 'неизвестно');
@@ -4269,7 +4300,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.26';
+const CURRENT_VERSION = 'v3.27';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5727,6 +5758,13 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.27', date: '03.07.2026',
+    changes: [
+      'Панели «Заявки» и «Управление аккаунтами» теперь закрываются только по крестику',
+      'Переработан дизайн панели управления аккаунтами: инлайновая форма сброса пароля',
+    ]
+  },
   {
     version: 'v3.26', date: '03.07.2026',
     changes: [
