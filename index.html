@@ -1572,7 +1572,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.27</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.28</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2231,7 +2231,6 @@ function closeLoginModal() {
 }
 
 function loginOverlayClick(e) {
-  if (e.target === document.getElementById('loginOverlay')) closeLoginModal();
 }
 
 function switchAuthTab(tab) {
@@ -4300,7 +4299,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.27';
+const CURRENT_VERSION = 'v3.28';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5758,6 +5757,12 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.28', date: '03.07.2026',
+    changes: [
+      'Окно авторизации и регистрации теперь закрывается только по крестику',
+    ]
+  },
   {
     version: 'v3.27', date: '03.07.2026',
     changes: [
