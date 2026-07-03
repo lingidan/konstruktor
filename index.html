@@ -1544,7 +1544,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.22</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.25</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2142,9 +2142,27 @@ function collectFormData() {
   };
 }
 
+// ─── Backend API (Google Apps Script) ─────────────────────────────────────
+// Задеплойте Code.gs как Web App и вставьте URL сюда:
+const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyWKcdkuY-egAz91vu7Pdu3wSmyE1nbMPMFmzKjHbEdUIo8pc2KP1hYH-v0MZvoa6os/exec';
+
+async function _apiCall(params) {
+  const url = BACKEND_URL + '?' + new URLSearchParams(params).toString();
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error('http ' + resp.status);
+  return resp.json();
+}
+
+function _authToken() {
+  return localStorage.getItem('auth_token') || '';
+}
+
+function _saveAuth(token, user) {
+  if (token) localStorage.setItem('auth_token', token);
+  localStorage.setItem('auth_user', JSON.stringify(user));
+}
+
 // ─── Google Sheets: база сотрудников ──────────────────────────────────────
-// Мастер-реестр: Пользователи + листы организаций
-const MASTER_SHEET_ID = '1Thw1FraaXvuqDD_qQ-Bdd-Kbx7JvScSn-iYRD5v3-ts';
 
 let employeeMap = {};
 let issuersList = [];      // [{fio, dolzh, ppu}] — те, кто может выдавать наряд
@@ -2159,24 +2177,6 @@ function _ppuSort(a, b) {
 }
 let currentUser = null;
 
-function _parseSheetCSV(text) {
-  const rows = [];
-  let row = [], cur = '', inQ = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (c === '"') {
-      if (inQ && text[i + 1] === '"') { cur += '"'; i++; } // "" внутри поля → литеральная "
-      else { inQ = !inQ; }
-    }
-    else if (c === ',' && !inQ) { row.push(cur); cur = ''; }
-    else if ((c === '\n' || (c === '\r' && text[i+1] === '\n')) && !inQ) {
-      if (c === '\r') i++;
-      row.push(cur); rows.push(row); row = []; cur = '';
-    } else { cur += c; }
-  }
-  if (cur || row.length) { row.push(cur); rows.push(row); }
-  return rows;
-}
 
 
 function lookupEmployee(fio) {
@@ -2240,10 +2240,6 @@ function setRegType(type) {
   }
 }
 
-// URL Google Apps Script для записи заявок в лист "Регистрация"
-// Разверните скрипт и вставьте сюда URL:
-const REG_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyjQQ8h5QmyaSV3uvAOEMUPY6V8xiJjwN6gTqxkUogQ-FXWJeer5SHW42VpQ0NY1S0/exec';
-
 async function doRegister() {
   const familiya  = document.getElementById('regFamiliya').value.trim();
   const imya      = document.getElementById('regImya').value.trim();
@@ -2274,70 +2270,44 @@ async function doRegister() {
   btn.disabled = true;
   btn.textContent = 'Проверка…';
 
-  // Проверяем занятость логина и дубли заявок параллельно
   try {
-    const encUsers = encodeURIComponent('Пользователи');
-    const encReg   = encodeURIComponent('Регистрация');
-    const [respU, respR] = await Promise.all([
-      fetch(`https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encUsers}`).catch(() => null),
-      fetch(`https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encReg}`).catch(() => null),
-    ]);
-    if (respU && respU.ok) {
-      const rows = _parseSheetCSV(await respU.text()).slice(1);
-      if (rows.some(r => (r[4] || '').trim().toLowerCase() === login.toLowerCase())) {
-        errEl.textContent = 'Этот логин уже занят. Выберите другой.';
-        errEl.style.display = 'block';
-        btn.disabled = false; btn.textContent = 'Отправить заявку';
-        return;
-      }
+    const check = await _apiCall({ action: 'checkLogin', login, fio, org });
+    if (check.loginTaken) {
+      errEl.textContent = 'Этот логин уже занят. Выберите другой.';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Отправить заявку';
+      return;
     }
-    if (respR && respR.ok) {
-      const rows = _parseSheetCSV(await respR.text()).slice(1);
-      if (rows.some(r => (r[4] || '').trim().toLowerCase() === login.toLowerCase())) {
-        errEl.textContent = 'Заявка с таким логином уже отправлена. Дождитесь одобрения.';
-        errEl.style.display = 'block';
-        btn.disabled = false; btn.textContent = 'Отправить заявку';
-        return;
-      }
-      // Дубль по ФИО + организация
-      if (rows.some(r => (r[1] || '').trim().toLowerCase() === fio.toLowerCase() && (r[3] || '').trim().toLowerCase() === org.toLowerCase())) {
-        errEl.textContent = 'Заявка от этого сотрудника уже отправлена. Дождитесь одобрения.';
-        errEl.style.display = 'block';
-        btn.disabled = false; btn.textContent = 'Отправить заявку';
-        return;
-      }
+    if (check.regLoginDup) {
+      errEl.textContent = 'Заявка с таким логином уже отправлена. Дождитесь одобрения.';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Отправить заявку';
+      return;
+    }
+    if (check.regFioOrgDup) {
+      errEl.textContent = 'Заявка от этого сотрудника уже отправлена. Дождитесь одобрения.';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Отправить заявку';
+      return;
     }
   } catch(e) { /* если проверка не прошла — не блокируем отправку */ }
 
   btn.textContent = 'Отправка…';
 
-  const params = new URLSearchParams({ fio, dolzh, org, login, pwd, phone, email });
-  const url = REG_SCRIPT_URL + '?' + params.toString();
+  try {
+    const result = await _apiCall({ action: 'submitRegistration', fio, dolzh, org, login, password: pwd, phone, email });
+    if (!result.ok) throw new Error(result.error || 'fail');
 
-  // Image-трюк: Apps Script возвращает HTML, а не картинку — поэтому onerror
-  // срабатывает всегда при успешном ответе. Считаем успехом и onload, и onerror.
-  // Сбой = таймаут без какого-либо ответа от сервера.
-  let sendOk = false;
-  await new Promise((resolve) => {
-    const img = new Image();
-    img.onload  = () => { sendOk = true; resolve(); };
-    img.onerror = () => { sendOk = true; resolve(); }; // ответ пришёл — скрипт выполнился
-    setTimeout(resolve, 6000); // таймаут: sendOk останется false только если нет сети
-    img.src = url;
-  });
-
-  if (sendOk) {
     ['regFamiliya','regImya','regOtchestvo','regDolzh','regOrg','regLogin','regPassword','regPhone','regEmail']
       .forEach(id => { document.getElementById(id).value = ''; });
     setRegType('self');
-    // Сохраняем как ожидающего пользователя и сразу «входим»
-    const pendingUser = { fio, dolzh, org, login, pwd, pending: true };
+    const pendingUser = { fio, dolzh, org, login, pending: true };
     currentUser = pendingUser;
-    localStorage.setItem('auth_user', JSON.stringify(currentUser));
+    _saveAuth('', currentUser);
     closeLoginModal();
     updateAuthButton();
     startPendingCheck();
-  } else {
+  } catch(e) {
     errEl.textContent = 'Не удалось отправить заявку. Проверьте интернет и попробуйте снова.';
     errEl.style.display = 'block';
   }
@@ -2428,36 +2398,24 @@ async function doLogin() {
   errEl.style.display = 'none';
 
   try {
-    const url = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=%D0%9F%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D0%B8`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('net');
-    const csv = await resp.text();
-    const rows = _parseSheetCSV(csv);
-
-    // Строка 0 — заголовки, строки 1+ — данные
-    // Столбцы: 0=№, 1=ФИО, 2=Должность, 3=Организация, 4=Логин, 5=Пароль, 6=Телефон, 7=Email
-    const found = rows.slice(1).find(r =>
-      (r[4] || '').trim() === login && (r[5] || '').trim() === pwd
-    );
-
-    if (!found) {
-      errEl.textContent = 'Неверный логин или пароль';
+    const data = await _apiCall({ action: 'login', login, password: pwd });
+    if (!data.ok) {
+      if (data.error === 'locked') {
+        errEl.textContent = data.message || 'Слишком много попыток. Попробуйте через 15 минут.';
+      } else {
+        errEl.textContent = 'Неверный логин или пароль';
+      }
       errEl.style.display = 'block';
     } else {
-      currentUser = {
-        fio:   (found[1] || '').trim(),
-        dolzh: (found[2] || '').trim(),
-        org:   (found[3] || '').trim(),
-        login: login,
-      };
-      localStorage.setItem('auth_user', JSON.stringify(currentUser));
+      currentUser = data.user;
+      _saveAuth(data.token, currentUser);
       closeLoginModal();
       updateAuthButton();
       applyUserToForm();
       loadOrgPersonnel();
     }
   } catch(e) {
-    errEl.textContent = 'Ошибка подключения к таблице. Проверьте интернет.';
+    errEl.textContent = 'Ошибка подключения. Проверьте интернет.';
     errEl.style.display = 'block';
   } finally {
     submitBtn.disabled = false;
@@ -2509,32 +2467,18 @@ let _pendingCheckTimer = null;
 async function checkPendingApproval() {
   if (!currentUser || !currentUser.pending) return;
   try {
-    const url = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=%D0%9F%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D0%B8`;
-    const resp = await fetch(url);
-    if (!resp.ok) return;
-    const csv = await resp.text();
-    const rows = _parseSheetCSV(csv);
-    const found = rows.slice(1).find(r =>
-      (r[4] || '').trim() === currentUser.login && (r[5] || '').trim() === currentUser.pwd
-    );
-    if (found) {
-      // Одобрено — повышаем до полного доступа
-      currentUser = {
-        fio:   (found[1] || '').trim(),
-        dolzh: (found[2] || '').trim(),
-        org:   (found[3] || '').trim(),
-        login: currentUser.login,
-      };
-      localStorage.setItem('auth_user', JSON.stringify(currentUser));
+    const data = await _apiCall({ action: 'getPendingApproval', login: currentUser.login });
+    if (data.ok && data.approved) {
+      currentUser = data.user;
+      _saveAuth(data.token, currentUser);
       if (_pendingCheckTimer) { clearInterval(_pendingCheckTimer); _pendingCheckTimer = null; }
       updateAuthButton();
       applyUserToForm();
       loadOrgPersonnel();
-      // Уведомление пользователю
       const msg = document.createElement('div');
       msg.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#28a745;color:#fff;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2)';
       const _nameParts = currentUser.fio.trim().split(/\s+/);
-      const _firstName = _nameParts[1] || _nameParts[0]; // [0]=фамилия, [1]=имя
+      const _firstName = _nameParts[1] || _nameParts[0];
       msg.textContent = '✓ Доступ одобрен! Добро пожаловать, ' + _firstName + '!';
       document.body.appendChild(msg);
       setTimeout(() => msg.remove(), 5000);
@@ -2558,11 +2502,9 @@ function startPendingCheck() {
 
 // ── Тестовый аккаунт ─────────────────────────────────────────────────────────
 function loginAsTest() {
-  currentUser = { fio: 'Тестовый Аккаунт', dolzh: 'Тест', org: 'Тестовая организация', login: 'тест', _test: true };
-  localStorage.setItem('auth_user', JSON.stringify(currentUser));
-  closeLoginModal();
-  updateAuthButton();
-  applyUserToForm();
+  document.getElementById('lmLogin').value = 'тест';
+  document.getElementById('lmPassword').value = 'тест';
+  doLogin();
 }
 
 // ── Список организаций (datalist) ─────────────────────────────────────────────
@@ -2571,13 +2513,11 @@ let _orgListCache = null;
 async function loadOrgDatalist() {
   if (_orgListCache) { _fillOrgDatalist(_orgListCache); return; }
   try {
-    const url = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=%D0%9F%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D0%B8`;
-    const resp = await fetch(url);
-    if (!resp.ok) return;
-    const rows = _parseSheetCSV(await resp.text()).slice(1);
-    const orgs = [...new Set(rows.map(r => (r[3] || '').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'ru'));
-    _orgListCache = orgs;
-    _fillOrgDatalist(orgs);
+    const data = await _apiCall({ action: 'getOrgList' });
+    if (data.ok) {
+      _orgListCache = data.orgs;
+      _fillOrgDatalist(data.orgs);
+    }
   } catch(e) {}
 }
 
@@ -2600,14 +2540,11 @@ function _showAdminBtn() {
 
 async function _refreshAdminBadge() {
   try {
-    const url = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=%D0%A0%D0%B5%D0%B3%D0%B8%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D1%8F`;
-    const resp = await fetch(url);
-    if (!resp.ok) return;
-    const rows = _parseSheetCSV(await resp.text()).slice(1).filter(r => r.some(c => c.trim()));
+    const data = await _apiCall({ action: 'getAdminBadge', token: _authToken() });
     const badge = document.getElementById('adminRegCount');
     if (!badge) return;
-    if (rows.length > 0) {
-      badge.textContent = rows.length;
+    if (data.ok && data.count > 0) {
+      badge.textContent = data.count;
       badge.style.display = 'inline-block';
     } else {
       badge.style.display = 'none';
@@ -2624,12 +2561,11 @@ async function openAdminRegPanel() {
   await loadOrgDatalist();
 
   try {
-    const url = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=%D0%A0%D0%B5%D0%B3%D0%B8%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D1%8F`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('net');
-    const rows = _parseSheetCSV(await resp.text()).slice(1).filter(r => r.some(c => c.trim()));
+    const data = await _apiCall({ action: 'getAdminRegList', token: _authToken() });
+    if (!data.ok) throw new Error(data.error || 'forbidden');
+    const rows = data.rows;
 
-    if (rows.length === 0) {
+    if (!rows.length) {
       body.innerHTML = '<div style="text-align:center;color:var(--gray-400);padding:40px 0;">Заявок нет</div>';
       return;
     }
@@ -2640,38 +2576,38 @@ async function openAdminRegPanel() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
             <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">ФИО</div>
-            <input id="arFio${i}" value="${_esc(r[1])}"
+            <input id="arFio${i}" value="${_esc(r.fio)}"
               style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;background:white;">
           </div>
           <div>
             <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Должность</div>
-            <input id="arDolzh${i}" value="${_esc(r[2])}"
+            <input id="arDolzh${i}" value="${_esc(r.dolzh)}"
               style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;background:white;">
           </div>
           <div style="grid-column:span 2;">
             <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Организация</div>
-            <input id="arOrg${i}" value="${_esc(r[3])}" list="orgDatalist"
+            <input id="arOrg${i}" value="${_esc(r.org)}" list="orgDatalist"
               style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;background:white;">
           </div>
           <div>
             <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Логин</div>
-            <input id="arLogin${i}" value="${_esc(r[4])}"
+            <input id="arLogin${i}" value="${_esc(r.login)}"
               style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;background:white;">
           </div>
           <div>
-            <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Пароль</div>
-            <input id="arPwd${i}" value="${_esc(r[5])}"
+            <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Новый пароль <span style="font-weight:400;color:var(--gray-400)">(необяз.)</span></div>
+            <input id="arPwd${i}" placeholder="Оставить пароль пользователя"
               style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;background:white;">
           </div>
-          ${r[6] ? `<div><div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Телефон</div><input id="arPhone${i}" value="${_esc(r[6])}" style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;background:white;"></div>` : ''}
-          ${r[7] ? `<div><div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Email</div><input id="arEmail${i}" value="${_esc(r[7])}" style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;background:white;"></div>` : ''}
+          ${r.phone ? `<div><div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Телефон</div><input id="arPhone${i}" value="${_esc(r.phone)}" style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;background:white;"></div>` : ''}
+          ${r.email ? `<div><div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px;">Email</div><input id="arEmail${i}" value="${_esc(r.email)}" style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;background:white;"></div>` : ''}
         </div>
         <div style="display:flex;gap:10px;margin-top:14px;">
-          <button onclick="approveRegRow(${i},'${_esc(r[4])}')"
+          <button onclick="approveRegRow(${i},'${_esc(r.login)}')"
             style="flex:1;padding:9px;background:var(--navy);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
             ✓ Одобрить
           </button>
-          <button onclick="rejectRegRow(${i},'${_esc(r[4])}')"
+          <button onclick="rejectRegRow(${i},'${_esc(r.login)}')"
             style="padding:9px 16px;background:white;color:#dc2626;border:1.5px solid #dc2626;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
             Отклонить
           </button>
@@ -2691,33 +2627,30 @@ function closeAdminRegPanel() {
 function _esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
 async function approveRegRow(i, origLogin) {
-  const fio   = document.getElementById('arFio'+i)?.value.trim()   || '';
-  const dolzh = document.getElementById('arDolzh'+i)?.value.trim() || '';
-  const org   = document.getElementById('arOrg'+i)?.value.trim()   || '';
-  const login = document.getElementById('arLogin'+i)?.value.trim() || '';
-  const pwd   = document.getElementById('arPwd'+i)?.value.trim()   || '';
-  const phone = document.getElementById('arPhone'+i)?.value?.trim() || '';
-  const email = document.getElementById('arEmail'+i)?.value?.trim() || '';
-  const msgEl = document.getElementById('arMsg'+i);
+  const fio    = document.getElementById('arFio'+i)?.value.trim()   || '';
+  const dolzh  = document.getElementById('arDolzh'+i)?.value.trim() || '';
+  const org    = document.getElementById('arOrg'+i)?.value.trim()   || '';
+  const login  = document.getElementById('arLogin'+i)?.value.trim() || '';
+  const newPwd = document.getElementById('arPwd'+i)?.value.trim()   || '';
+  const phone  = document.getElementById('arPhone'+i)?.value?.trim() || '';
+  const email  = document.getElementById('arEmail'+i)?.value?.trim() || '';
+  const msgEl  = document.getElementById('arMsg'+i);
 
-  const params = new URLSearchParams({ action: 'approve', origLogin, fio, dolzh, org, login, pwd, phone, email });
   msgEl.style.color = 'var(--gray-400)';
   msgEl.textContent = 'Обработка…';
   msgEl.style.display = 'block';
 
-  let ok = false;
-  await new Promise(resolve => {
-    const img = new Image();
-    img.onload = img.onerror = () => { ok = true; resolve(); };
-    setTimeout(resolve, 8000);
-    img.src = REG_SCRIPT_URL + '?' + params.toString();
-  });
-
-  if (ok) {
-    msgEl.style.color = '#28a745';
-    msgEl.textContent = '✓ Одобрено! Пользователь добавлен в систему.';
-    document.getElementById('arFio'+i)?.closest('div[style*="border:1.5px"]')?.querySelectorAll('button').forEach(b => b.disabled = true);
-  } else {
+  try {
+    const result = await _apiCall({ action: 'approveReg', token: _authToken(), origLogin, fio, dolzh, org, login, newPwd, phone, email });
+    if (result.ok) {
+      msgEl.style.color = '#28a745';
+      msgEl.textContent = '✓ Одобрено! Пользователь добавлен в систему.';
+      document.getElementById('arFio'+i)?.closest('div[style*="border:1.5px"]')?.querySelectorAll('button').forEach(b => b.disabled = true);
+    } else {
+      msgEl.style.color = '#dc2626';
+      msgEl.textContent = 'Ошибка: ' + (result.error || 'неизвестно');
+    }
+  } catch(e) {
     msgEl.style.color = '#dc2626';
     msgEl.textContent = 'Ошибка. Проверьте интернет и попробуйте снова.';
   }
@@ -2726,24 +2659,21 @@ async function approveRegRow(i, origLogin) {
 async function rejectRegRow(i, origLogin) {
   if (!confirm('Отклонить заявку от «' + origLogin + '»?')) return;
   const msgEl = document.getElementById('arMsg'+i);
-  const params = new URLSearchParams({ action: 'reject', origLogin });
   msgEl.style.color = 'var(--gray-400)';
   msgEl.textContent = 'Обработка…';
   msgEl.style.display = 'block';
 
-  let ok = false;
-  await new Promise(resolve => {
-    const img = new Image();
-    img.onload = img.onerror = () => { ok = true; resolve(); };
-    setTimeout(resolve, 8000);
-    img.src = REG_SCRIPT_URL + '?' + params.toString();
-  });
-
-  if (ok) {
-    msgEl.style.color = '#dc2626';
-    msgEl.textContent = '✗ Заявка отклонена и удалена.';
-    document.getElementById('arFio'+i)?.closest('div[style*="border:1.5px"]')?.querySelectorAll('button').forEach(b => b.disabled = true);
-  } else {
+  try {
+    const result = await _apiCall({ action: 'rejectReg', token: _authToken(), origLogin });
+    if (result.ok) {
+      msgEl.style.color = '#dc2626';
+      msgEl.textContent = '✗ Заявка отклонена и удалена.';
+      document.getElementById('arFio'+i)?.closest('div[style*="border:1.5px"]')?.querySelectorAll('button').forEach(b => b.disabled = true);
+    } else {
+      msgEl.style.color = '#dc2626';
+      msgEl.textContent = 'Ошибка: ' + (result.error || 'неизвестно');
+    }
+  } catch(e) {
     msgEl.style.color = '#dc2626';
     msgEl.textContent = 'Ошибка. Проверьте интернет.';
   }
@@ -2764,6 +2694,7 @@ function closeLogoutConfirm() {
 function logout() {
   currentUser = null;
   localStorage.removeItem('auth_user');
+  localStorage.removeItem('auth_token');
   syncEnabled = false;
   employeeMap = {};
   issuersList = [];
@@ -3349,13 +3280,12 @@ function loadOrgPersonnel() {
   const org = currentUser.org;
   const _ssKey = 'session_personnel_' + org;
 
-  const _doLoad = csv => {
-      const rows = _parseSheetCSV(csv);
-      const hdrs = rows.length ? rows[0].map(h => (h || '').toLowerCase()) : [];
+  const _doLoad = data => {
+      const hdrs = (data.headers || []).map(h => (h || '').toLowerCase());
+      const rows = data.rows || [];
       const iFIO   = hdrs.findIndex(h => h.includes('фио') || h.includes('ф.и.о'));
-      // Если строк меньше двух или нет колонки ФИО — это не лист организации
-      // (например, Google вернул запасной/чужой лист вместо несуществующего).
-      if (rows.length < 2 || iFIO < 0) { _resetOrgPersonnelData(); return; }
+      // Если нет строк данных или нет колонки ФИО — это не лист организации
+      if (rows.length < 1 || iFIO < 0) { _resetOrgPersonnelData(); return; }
       const iDolzh = hdrs.findIndex(h => h.includes('должн'));
       const iRazr  = hdrs.findIndex(h => h.includes('разряд') || h.includes('профессия'));
       const iGrEB  = hdrs.findIndex(h => h.includes('группа') && (h.includes('эб') || h.includes('эл')));
@@ -3374,7 +3304,7 @@ function loadOrgPersonnel() {
       // выбран руководителем работ), поэтому разбираем ячейку на токены.
       const _isOperatorLoad = isOperatorUser(currentUser);
       const _issuerMarker = _isOperatorLoad ? 'выдает' : 'да';
-      for (let i = 1; i < rows.length; i++) {
+      for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
         const fio = ((iFIO >= 0 ? r[iFIO] : r[1]) || '').trim();
         if (!fio) continue;
@@ -3394,7 +3324,7 @@ function loadOrgPersonnel() {
       orgDangers = [];
       if (iDName >= 0) {
         const seenNames = new Set();
-        for (let i = 1; i < rows.length; i++) {
+        for (let i = 0; i < rows.length; i++) {
           const r = rows[i];
           const name = (r[iDName] || '').trim();
           if (!name || seenNames.has(name)) continue;
@@ -3414,7 +3344,7 @@ function loadOrgPersonnel() {
       const iP5St = hdrs.findIndex(h => h.includes('неизменн') && (h.includes('п.5') || h.includes('п5') || h.endsWith('5')));
       orgStaticData = { p3: null, p4rows: [], p5rows: [] };
       if (iP3St >= 0 || iP4St >= 0 || iP5St >= 0) {
-        for (let i = 1; i < rows.length; i++) {
+        for (let i = 0; i < rows.length; i++) {
           const r = rows[i];
           const p3val  = (iP3St >= 0 ? r[iP3St] : '').trim();
           const p4val  = (iP4St >= 0 ? r[iP4St] : '').trim();
@@ -3436,7 +3366,7 @@ function loadOrgPersonnel() {
       const _seenRooms = new Set();
       const _seenVid   = new Set();
       const _seenApp   = new Set();
-      for (let i = 1; i < rows.length; i++) {
+      for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
         if (iZdanie >= 0 && iPomesh >= 0) {
           const bld   = (r[iZdanie]  || '').trim();
@@ -3486,18 +3416,16 @@ function loadOrgPersonnel() {
       syncAllRows();
   };
 
-  const _cachedCsv = sessionStorage.getItem(_ssKey);
-  if (_cachedCsv) {
-    _doLoad(_cachedCsv);
-    return;
+  const _cached = sessionStorage.getItem(_ssKey);
+  if (_cached) {
+    try { _doLoad(JSON.parse(_cached)); return; } catch(e) {}
   }
 
-  const sheetUrl = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(org)}`;
-  fetch(sheetUrl)
-    .then(r => { if (!r.ok) throw new Error(); return r.text(); })
-    .then(csv => {
-      try { sessionStorage.setItem(_ssKey, csv); } catch(e) {}
-      _doLoad(csv);
+  _apiCall({ action: 'getOrgPersonnel', token: _authToken() })
+    .then(data => {
+      if (!data.ok || !data.rows || data.rows.length < 1) { _resetOrgPersonnelData(); return; }
+      try { sessionStorage.setItem(_ssKey, JSON.stringify(data)); } catch(e) {}
+      _doLoad(data);
     })
     .catch(() => {
       console.warn('Не удалось загрузить сотрудников организации:', org);
@@ -4217,7 +4145,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.22';
+const CURRENT_VERSION = 'v3.25';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -4324,8 +4252,7 @@ function downloadBlob(blob, filename) {
 
 function trackDocGenerated() {
   const login = (currentUser && currentUser.login) ? currentUser.login : 'anonymous';
-  const params = new URLSearchParams({ action: 'trackDocs', login, count: 1 });
-  fetch(REG_SCRIPT_URL + '?' + params.toString()).catch(() => {});
+  _apiCall({ action: 'trackDocs', login }).catch(() => {});
 }
 
 async function downloadNaryad(btn) {
@@ -4707,18 +4634,16 @@ const TEMPLATE_STATIC_DATA = {
 };
 
 function applyTemplateData() {
-  const sheetUrl = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('Без регистрации')}`;
-  fetch(sheetUrl)
-    .then(r => { if (!r.ok) throw new Error(); return r.text(); })
-    .then(csv => {
-      const rows = _parseSheetCSV(csv);
-      if (rows.length < 2) throw new Error('empty');
-      const hdrs = rows[0].map(h => (h || "").toLowerCase());
+  _apiCall({ action: 'getUnregisteredTemplate' })
+    .then(data => {
+      if (!data.ok || !data.rows || data.rows.length < 1) throw new Error('empty');
+      const hdrs = data.headers.map(h => (h || '').toLowerCase());
+      const rows = data.rows;
       const iName = hdrs.findIndex(h => h.includes('назван') || h.includes('опасн'));
       if (iName >= 0) {
         const seenNames = new Set();
         orgDangers = [];
-        for (let i = 1; i < rows.length; i++) {
+        for (let i = 0; i < rows.length; i++) {
           const r = rows[i];
           const name = (r[iName] || '').trim();
           if (!name || seenNames.has(name)) continue;
@@ -4739,7 +4664,7 @@ function applyTemplateData() {
       const iP5St = hdrs.findIndex(h => h.includes('неизменн') && (h.includes('п.5') || h.includes('п5') || h.endsWith('5')));
       orgStaticData = { p3: null, p4rows: [], p5rows: [] };
       if (iP3St >= 0 || iP4St >= 0 || iP5St >= 0) {
-        for (let i = 1; i < rows.length; i++) {
+        for (let i = 0; i < rows.length; i++) {
           const r = rows[i];
           const p3val = (iP3St >= 0 ? r[iP3St] : '').trim();
           const p4val = (iP4St >= 0 ? r[iP4St] : '').trim();
@@ -5678,6 +5603,26 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.25', date: '03.07.2026',
+    changes: [
+      'Кнопка «Тестовый аккаунт» теперь входит через таблицу сотрудников (логин/пароль «тест»)',
+    ]
+  },
+  {
+    version: 'v3.24', date: '03.07.2026',
+    changes: [
+      'Исправлен баг: при одобрении заявки на регистрацию теперь корректно переносится пароль и удаляется заявка',
+    ]
+  },
+  {
+    version: 'v3.23', date: '03.07.2026',
+    changes: [
+      'Прямые обращения к Google Таблице из браузера заменены на серверный backend (Google Apps Script) — таблица стала полностью приватной',
+      'Пароли хранятся в хешированном виде (SHA-256), при входе выполняется автоматическая миграция старых паролей',
+      'Добавлена защита от перебора паролей: блокировка аккаунта на 15 минут после 5 неверных попыток',
+    ]
+  },
   {
     version: 'v3.22', date: '02.07.2026',
     changes: [
@@ -7744,20 +7689,15 @@ document.addEventListener('wheel', e => {
     } else {
       applyUserToForm();
       loadOrgPersonnel();
-      // Фоновое обновление данных из листа — на случай если орг/должность изменились
+      // Фоновое обновление данных — на случай если орг/должность изменились
       (async () => {
         try {
-          const url = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=%D0%9F%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D0%B8`;
-          const resp = await fetch(url);
-          if (!resp.ok) return;
-          const rows = _parseSheetCSV(await resp.text()).slice(1);
-          const found = rows.find(r => (r[4] || '').trim() === currentUser.login);
-          if (!found) return;
-          const freshOrg = (found[3] || '').trim();
-          if (freshOrg && freshOrg !== currentUser.org) {
-            currentUser.org = freshOrg;
-            currentUser.fio   = (found[1] || '').trim() || currentUser.fio;
-            currentUser.dolzh = (found[2] || '').trim() || currentUser.dolzh;
+          const data = await _apiCall({ action: 'refreshUserData', token: _authToken() });
+          if (!data.ok || !data.found) return;
+          const fresh = data.user;
+          if (data.token) localStorage.setItem('auth_token', data.token);
+          if (fresh.org !== currentUser.org || fresh.fio !== currentUser.fio || fresh.dolzh !== currentUser.dolzh) {
+            currentUser = fresh;
             localStorage.setItem('auth_user', JSON.stringify(currentUser));
             applyUserToForm();
             loadOrgPersonnel();
