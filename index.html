@@ -1572,7 +1572,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.30</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.31</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2196,6 +2196,11 @@ let employeeMap = {};
 let issuersList = [];      // [{fio, dolzh, ppu}] — те, кто может выдавать наряд
 let allEmployeesList = []; // [{fio, dolzh, razr, grEB, grVys, ppu}] — все сотрудники
 let receiversList = [];    // [{fio, dolzh, ppu}] — те, за кого Оператор может оформлять наряд ("Получает" в столбце H)
+
+// Состояние загрузки базы сотрудников: 'idle' | 'loading' | 'ready' | 'error'
+let _personnelStatus = 'idle';
+// Колбэки пикеров, которые нажали "Из списка" пока шла загрузка
+let _personnelPendingOpeners = [];
 
 function _ppuSort(a, b) {
   const aNum = /^\d/.test(a), bNum = /^\d/.test(b);
@@ -2853,6 +2858,8 @@ function logout() {
   employeeMap = {};
   issuersList = [];
   allEmployeesList = [];
+  _personnelStatus = 'idle';
+  _personnelPendingOpeners.length = 0;
   rebuildIssuerPpuFilter();
   rebuildCrewPpuFilter();
   updateCrewPickerBtn();
@@ -2919,6 +2926,48 @@ function closeNoEmployeeDataModal() {
   document.getElementById('noEmployeeDataModal').style.display = 'none';
 }
 
+// ─── Модалка загрузки базы сотрудников ────────────────────────────────────
+function _showPersonnelLoadingModal(state) {
+  // state: 'loading' | 'success' | 'error'
+  const modal = document.getElementById('personnelLoadingModal');
+  const stLoading = document.getElementById('plmStateLoading');
+  const stSuccess = document.getElementById('plmStateSuccess');
+  const stError   = document.getElementById('plmStateError');
+  stLoading.style.display = state === 'loading' ? 'flex' : 'none';
+  stSuccess.style.display = state === 'success' ? 'flex' : 'none';
+  stError.style.display   = state === 'error'   ? 'block' : 'none';
+  modal.style.display = 'flex';
+}
+function _hidePersonnelLoadingModal() {
+  document.getElementById('personnelLoadingModal').style.display = 'none';
+}
+
+// Вызывается когда пикер нажат, но загрузка ещё идёт
+function _openPickerWhenReady(openerFn) {
+  if (_personnelStatus === 'ready') { openerFn(); return; }
+  if (_personnelStatus === 'error') { openNoEmployeeDataModal(); return; }
+  // status === 'loading' — ждём
+  _personnelPendingOpeners.push(openerFn);
+  _showPersonnelLoadingModal('loading');
+}
+
+function _personnelNotifyPending(success) {
+  const hasPending = _personnelPendingOpeners.length > 0;
+  if (!hasPending) return; // загрузка шла фоном, модалка не открывалась
+  if (success) {
+    _showPersonnelLoadingModal('success');
+    const openers = _personnelPendingOpeners.splice(0);
+    setTimeout(() => {
+      _hidePersonnelLoadingModal();
+      // Открываем последний нажатый пикер (остальные дублировали бы)
+      if (openers.length) openers[openers.length - 1]();
+    }, 1200);
+  } else {
+    _personnelPendingOpeners.length = 0;
+    _showPersonnelLoadingModal('error');
+  }
+}
+
 function updateCrewPickerBtn() {
   const btn = document.getElementById('btnPickCrew');
   if (btn) btn.style.display = currentUser ? 'inline-flex' : 'none';
@@ -2929,6 +2978,7 @@ function updateCrewPickerBtn() {
 let _crewPickerSel = new Set();
 
 function openCrewPicker() {
+  if (_personnelStatus === 'loading') { _openPickerWhenReady(() => openCrewPicker()); return; }
   if (!allEmployeesList.length) { openNoEmployeeDataModal(); return; }
   _crewPickerSel.clear();
   document.getElementById('crewSearch').value = '';
@@ -3145,6 +3195,7 @@ function addCrewSelected() {
 
 function openIssuerPicker() {
   if (!currentUser) { openLoginModal(); return; }
+  if (_personnelStatus === 'loading') { _openPickerWhenReady(() => openIssuerPicker()); return; }
   if (!issuersList.length) { openNoEmployeeDataModal(); return; }
   renderIssuerList();
   document.getElementById('issuerPickerOverlay').classList.add('open');
@@ -3290,6 +3341,7 @@ function rebuildRukovPpuFilter() {
 
 function openRukovPicker() {
   if (!currentUser) { openLoginModal(); return; }
+  if (_personnelStatus === 'loading') { _openPickerWhenReady(() => openRukovPicker()); return; }
   if (!receiversList.length) { openNoEmployeeDataModal(); return; }
   renderRukovList();
   document.getElementById('rukovPickerOverlay').classList.add('open');
@@ -3431,6 +3483,7 @@ function _resetOrgPersonnelData() {
 
 function loadOrgPersonnel() {
   if (!currentUser) return;
+  _personnelStatus = 'loading';
   const org = currentUser.org;
   const _ssKey = 'session_personnel_' + org;
 
@@ -3568,6 +3621,9 @@ function loadOrgPersonnel() {
       } catch(e) {}
       syncEnabled = true;
       syncAllRows();
+      // Уведомляем всех ожидающих: загрузка успешна
+      _personnelStatus = 'ready';
+      _personnelNotifyPending(true);
   };
 
   const _ssKeyLs = 'personnel_cache_' + org; // localStorage-ключ для резервного кэша
@@ -3607,6 +3663,9 @@ function loadOrgPersonnel() {
         } catch(e) {}
         console.warn('Не удалось загрузить сотрудников организации:', org);
         _resetOrgPersonnelData();
+        // Уведомляем всех ожидающих: загрузка не удалась
+        _personnelStatus = 'error';
+        _personnelNotifyPending(false);
       }
     }
   }
@@ -4326,7 +4385,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.30';
+const CURRENT_VERSION = 'v3.31';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5784,6 +5843,12 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.31', date: '04.07.2026',
+    changes: [
+      'При нажатии «Из списка» пока база ещё загружается — показывается окно «Проверяем базу данных…», после успеха «Данные загружены» и пикер открывается автоматически',
+    ]
+  },
   {
     version: 'v3.30', date: '04.07.2026',
     changes: [
@@ -8044,6 +8109,49 @@ function copyDevEmail() {
     <div id="roomPickerPreviewText">—</div>
   </div>
 </div>
+
+<!-- ── Модалка: загрузка базы сотрудников ── -->
+<div id="personnelLoadingModal" style="display:none;position:fixed;inset:0;z-index:9810;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.3);width:340px;max-width:92vw;overflow:hidden">
+    <div style="background:var(--navy);color:white;padding:14px 16px;font-weight:700;font-size:14px">База сотрудников</div>
+    <!-- Состояние: загрузка -->
+    <div id="plmStateLoading" style="padding:28px 24px;display:flex;flex-direction:column;align-items:center;gap:16px">
+      <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:plmSpin .8s linear infinite"></div>
+      <div style="font-size:14px;color:var(--text);text-align:center">Проверяем базу данных…</div>
+    </div>
+    <!-- Состояние: успех -->
+    <div id="plmStateSuccess" style="display:none;padding:28px 24px;display:none;flex-direction:column;align-items:center;gap:14px">
+      <div style="width:44px;height:44px;border-radius:50%;background:#d4edda;display:flex;align-items:center;justify-content:center;font-size:22px">✓</div>
+      <div style="font-size:14px;color:var(--text);text-align:center;font-weight:600">Данные загружены</div>
+    </div>
+    <!-- Состояние: ошибка -->
+    <div id="plmStateError" style="display:none">
+      <div style="padding:20px 20px 8px">
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px">
+          <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:#fff3cd;display:flex;align-items:center;justify-content:center;font-size:18px">⚠️</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.6">
+            Данные сотрудников для вашей организации не предоставлены.<br>
+            Для получения доступа к базе необходимо обратиться к разработчику и запросить шаблон для заполнения данных.
+          </div>
+        </div>
+        <div style="background:var(--bg-page);border-radius:8px;padding:12px 14px;margin-bottom:16px">
+          <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">Электронная почта разработчика</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:13px;font-weight:600;color:var(--navy)">lingidanm@gmail.com</span>
+            <button onclick="navigator.clipboard.writeText('lingidanm@gmail.com');this.textContent='✓ Скопировано';setTimeout(()=>this.textContent='Копировать',2000)"
+              style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:5px;background:transparent;color:var(--text);cursor:pointer">Копировать</button>
+          </div>
+        </div>
+      </div>
+      <div style="padding:0 20px 16px;display:flex;justify-content:flex-end">
+        <button onclick="_hidePersonnelLoadingModal()" style="background:var(--accent);color:white;border:none;border-radius:6px;padding:7px 20px;cursor:pointer;font-size:13px;font-weight:600">Понятно</button>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+@keyframes plmSpin { to { transform: rotate(360deg); } }
+</style>
 
 <!-- ── Модалка: данные сотрудников не предоставлены ── -->
 <div id="noEmployeeDataModal" style="display:none;position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.5);display:none" onclick="if(event.target===this)closeNoEmployeeDataModal()">
