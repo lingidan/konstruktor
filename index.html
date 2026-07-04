@@ -1572,7 +1572,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.28</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.30</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3570,21 +3570,48 @@ function loadOrgPersonnel() {
       syncAllRows();
   };
 
+  const _ssKeyLs = 'personnel_cache_' + org; // localStorage-ключ для резервного кэша
+
   const _cached = sessionStorage.getItem(_ssKey);
   if (_cached) {
     try { _doLoad(JSON.parse(_cached)); return; } catch(e) {}
   }
 
-  _apiCall({ action: 'getOrgPersonnel', token: _authToken() })
-    .then(data => {
-      if (!data.ok || !data.rows || data.rows.length < 1) { _resetOrgPersonnelData(); return; }
+  // Retry-логика: до 3 попыток с паузой 3 сек (решает cold start Google Apps Script)
+  async function _fetchWithRetry(attemptsLeft) {
+    try {
+      const data = await _apiCall({ action: 'getOrgPersonnel', token: _authToken() });
+      if (!data.ok || !data.rows || data.rows.length < 1) throw new Error('empty');
+      // Успех — сохраняем в оба кэша
       try { sessionStorage.setItem(_ssKey, JSON.stringify(data)); } catch(e) {}
+      try {
+        localStorage.setItem(_ssKeyLs, JSON.stringify({ ts: Date.now(), data }));
+      } catch(e) {}
       _doLoad(data);
-    })
-    .catch(() => {
-      console.warn('Не удалось загрузить сотрудников организации:', org);
-      _resetOrgPersonnelData();
-    });
+    } catch(err) {
+      if (attemptsLeft > 1) {
+        console.warn('Повтор загрузки базы сотрудников через 3 сек, осталось попыток:', attemptsLeft - 1);
+        setTimeout(() => _fetchWithRetry(attemptsLeft - 1), 3000);
+      } else {
+        // Все попытки исчерпаны — пробуем резервный кэш из localStorage (до 24 ч)
+        try {
+          const _lsRaw = localStorage.getItem(_ssKeyLs);
+          if (_lsRaw) {
+            const _ls = JSON.parse(_lsRaw);
+            if (_ls && _ls.data && (Date.now() - _ls.ts) < 86400000) {
+              console.warn('Используем резервный кэш базы сотрудников (данные могут быть устаревшими)');
+              _doLoad(_ls.data);
+              return;
+            }
+          }
+        } catch(e) {}
+        console.warn('Не удалось загрузить сотрудников организации:', org);
+        _resetOrgPersonnelData();
+      }
+    }
+  }
+
+  _fetchWithRetry(3);
 }
 
 function syncAllRows() {
@@ -4299,7 +4326,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.28';
+const CURRENT_VERSION = 'v3.30';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5651,7 +5678,7 @@ async function buildOgnevoyDocument(data) {
           ],
         }),
         p(dateStr, { align: AlignmentType.RIGHT }),
-        hint('руководитель или лицо, ответственное за пожарную безопасность, должность, ф.и.о.', { align: AlignmentType.RIGHT }),
+        hint('ф.и.о., подпись', { align: AlignmentType.RIGHT }),
 
         // Заголовок
         p(`НАРЯД-ДОПУСК на выполнение огневых работ № ${nomerOgn}`, { bold: true, size: 24, align: AlignmentType.CENTER, spacing: { before: 120, after: 40, line: 200, lineRule: 'auto' } }),
@@ -5757,6 +5784,19 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.30', date: '04.07.2026',
+    changes: [
+      'Улучшена надёжность загрузки базы сотрудников: до 3 автоматических попыток при сбое',
+      'Добавлен резервный кэш базы в localStorage — данные доступны даже при недоступном сервере',
+    ]
+  },
+  {
+    version: 'v3.29', date: '03.07.2026',
+    changes: [
+      'В огневом наряде: подсказка под блоком «УТВЕРЖДАЮ» сокращена до «ф.и.о., подпись»',
+    ]
+  },
   {
     version: 'v3.28', date: '03.07.2026',
     changes: [
