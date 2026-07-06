@@ -5153,7 +5153,7 @@ async function downloadTemplateFile(btn) {
     a.remove();
     URL.revokeObjectURL(url);
   } catch (e) {
-    alert('Не удалось скачать шаблон. Попробуйте ещё раз или напишите разработчику.');
+    alert('Не удалось скачать шаблон.\n\nТЕХ. ДЕТАЛИ (временно, для отладки):\n' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = label; }
   }
