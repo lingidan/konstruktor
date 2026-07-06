@@ -1630,7 +1630,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.34</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.35</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3600,7 +3600,8 @@ function loadOrgPersonnel() {
         const ppu      = ((iPPU   >= 0 ? r[iPPU]   : r[6]) || '').trim();
         const canIssueTokens = ((iIssue >= 0 ? r[iIssue] : r[7]) || '').trim().toLowerCase().split(/[,\s]+/).filter(Boolean);
         employeeMap[fio.toLowerCase().replace(/\s+/g, ' ')] = { dolzh, razr, grEB };
-        const grVys = ((iGrVys >= 0 ? r[iGrVys] : '') || '').trim() || '2';
+        const _grVysRaw = iGrVys >= 0 ? r[iGrVys] : '';
+        const grVys = (_grVysRaw !== null && _grVysRaw !== undefined && String(_grVysRaw).trim() !== '') ? String(_grVysRaw).trim() : '2';
         allEmployeesList.push({ fio, dolzh, razr, grEB, grVys, ppu });
         if (canIssueTokens.includes(_issuerMarker)) issuersList.push({ fio, dolzh, ppu });
         // "Получает" среди токенов той же колонки — сотрудник может быть выбран
@@ -4546,7 +4547,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.34';
+const CURRENT_VERSION = 'v3.35';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -6007,6 +6008,13 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.35', date: '06.07.2026',
+    changes: [
+      'Исправлен баг: группа высоты «0» из базы данных теперь корректно читается как 0, а не заменяется на 2',
+      'Исправлен race condition: выход из аккаунта во время фонового обновления данных больше не приводит к ошибке',
+    ]
+  },
   {
     version: 'v3.34', date: '06.07.2026',
     changes: [
@@ -8227,7 +8235,7 @@ document.addEventListener('wheel', e => {
           if (!data.ok || !data.found) return;
           const fresh = data.user;
           if (data.token) localStorage.setItem('auth_token', data.token);
-          if (fresh.org !== currentUser.org || fresh.fio !== currentUser.fio || fresh.dolzh !== currentUser.dolzh) {
+          if (currentUser && (fresh.org !== currentUser.org || fresh.fio !== currentUser.fio || fresh.dolzh !== currentUser.dolzh)) {
             currentUser = fresh;
             localStorage.setItem('auth_user', JSON.stringify(currentUser));
             applyUserToForm();
