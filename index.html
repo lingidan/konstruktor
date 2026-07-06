@@ -159,6 +159,11 @@
   tbody td { padding: 6px 6px; vertical-align: middle; }
   tbody td:first-child { text-align: center; }
   tbody td input[type="text"] { padding: 7px 8px; font-size: 13px; border-width: 1.5px; }
+  .td-drag { width: 28px; text-align: center; cursor: grab; user-select: none; padding: 0 4px; }
+  .td-drag:active { cursor: grabbing; }
+  .drag-handle { font-size: 16px; color: var(--gray-400); line-height: 1; display: inline-block; }
+  tr.dnd-dragging { opacity: .4; }
+  tr.dnd-over { outline: 2px solid var(--accent); outline-offset: -1px; }
   .td-num { font-size: 13px; color: var(--gray-400); font-weight: 600; }
   td.cell-edit {
     padding: 7px 8px; font-size: 13px; border: 1.5px solid transparent;
@@ -1124,6 +1129,59 @@
     body { padding-top: 16px; }
     .page-header { padding-right: 56px; }
   }
+
+  /* ─── Мобильная адаптация ─────────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    body { padding: 12px 8px 40px; }
+    .container { gap: 12px; }
+    .card-body { padding: 14px 12px; }
+    .card-header { padding: 12px 14px; }
+
+    /* Все двух- и трёхколоночные сетки → одна колонка */
+    .grid-2, .grid-3 { grid-template-columns: 1fr !important; }
+    .col-span-2, .col-span-3 { grid-column: span 1 !important; }
+
+    /* Поля ввода с кнопками рядом — переносим на новую строку */
+    .field > div[style*="display:flex"] {
+      flex-wrap: wrap;
+    }
+    .field > div[style*="display:flex"] > textarea,
+    .field > div[style*="display:flex"] > input {
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+    .field > div[style*="display:flex"] > button {
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* Таблица исполнителей: горизонтальная прокрутка */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    #execTable { min-width: 520px; }
+
+    /* Кнопки под таблицей — переносятся */
+    .card-body > div[style*="flex-wrap"] { flex-wrap: wrap !important; }
+
+    /* Строки с flex-направлением row → column */
+    .field[style*="flex-direction:row"] { flex-direction: column !important; gap: 12px !important; }
+
+    /* Вкладки */
+    .tabs-bar { overflow-x: auto; }
+    .tab-add-btn { flex-shrink: 0; }
+
+    /* Шапка страницы */
+    .page-header h1 { font-size: 18px; }
+    .page-header p  { font-size: 11px; }
+
+    /* Пикеры и модалки — растягиваем на всю ширину */
+    #crewPickerOverlay > div,
+    #issuerPickerOverlay > div,
+    #rukovPickerOverlay > div,
+    #pprPickerOverlay > div { width: 96vw !important; max-width: 96vw !important; }
+
+    /* Версия в шапке */
+    #versionBadge { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -1572,7 +1630,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.33</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.34</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1766,7 +1824,15 @@
 
         <div class="field col-span-2">
           <label>ППР (проект производства работ)</label>
-          <input type="text" id="ppr" placeholder="">
+          <div style="display:flex;gap:6px;align-items:stretch">
+            <input type="text" id="ppr" placeholder="" style="flex:1;min-width:0">
+            <button type="button" id="pprPickBtn" onclick="openPprPicker()" title="Выбрать ППР из реестра"
+              style="display:none;flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;align-items:center;gap:5px;transition:background .15s,color .15s"
+              onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--accent-light)';this.style.color='var(--accent)'">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Из реестра
+            </button>
+          </div>
         </div>
 
         <div class="field col-span-2">
@@ -1826,6 +1892,7 @@
         <table id="execTable">
           <thead>
             <tr>
+              <th style="width:28px"></th>
               <th>№</th>
               <th style="min-width:170px">ФИО</th>
               <th style="min-width:160px">Должность</th>
@@ -2196,6 +2263,7 @@ let employeeMap = {};
 let issuersList = [];      // [{fio, dolzh, ppu}] — те, кто может выдавать наряд
 let allEmployeesList = []; // [{fio, dolzh, razr, grEB, grVys, ppu}] — все сотрудники
 let receiversList = [];    // [{fio, dolzh, ppu}] — те, за кого Оператор может оформлять наряд ("Получает" в столбце H)
+let orgPprData = [];       // [{blok, obj, nom, hdr}] — реестр ППР
 
 // Состояние загрузки базы сотрудников: 'idle' | 'loading' | 'ready' | 'error'
 let _personnelStatus = 'idle';
@@ -2945,10 +3013,17 @@ function _hidePersonnelLoadingModal() {
   document.getElementById('personnelLoadingModal').style.display = 'none';
 }
 
-// Вызывается когда пикер нажат, но загрузка ещё идёт
+// Вызывается когда пикер нажат, но загрузка ещё не завершена или провалилась
 function _openPickerWhenReady(openerFn) {
   if (_personnelStatus === 'ready') { openerFn(); return; }
-  if (_personnelStatus === 'error') { openNoEmployeeDataModal(); return; }
+  // Если загрузка провалилась или ещё не запускалась — пробуем ещё раз
+  if (_personnelStatus === 'error' || _personnelStatus === 'idle') {
+    if (currentUser) {
+      loadOrgPersonnel();
+    } else {
+      openNoEmployeeDataModal(); return;
+    }
+  }
   // status === 'loading' — ждём
   _personnelPendingOpeners.push(openerFn);
   _showPersonnelLoadingModal('loading');
@@ -2981,7 +3056,7 @@ function updateCrewPickerBtn() {
 let _crewPickerSel = new Set();
 
 function openCrewPicker() {
-  if (_personnelStatus === 'loading') { _openPickerWhenReady(() => openCrewPicker()); return; }
+  if (_personnelStatus !== 'ready') { _openPickerWhenReady(() => openCrewPicker()); return; }
   if (!allEmployeesList.length) { openNoEmployeeDataModal(); return; }
   _crewPickerSel.clear();
   document.getElementById('crewSearch').value = '';
@@ -3198,7 +3273,7 @@ function addCrewSelected() {
 
 function openIssuerPicker() {
   if (!currentUser) { openLoginModal(); return; }
-  if (_personnelStatus === 'loading') { _openPickerWhenReady(() => openIssuerPicker()); return; }
+  if (_personnelStatus !== 'ready') { _openPickerWhenReady(() => openIssuerPicker()); return; }
   if (!issuersList.length) { openNoEmployeeDataModal(); return; }
   renderIssuerList();
   document.getElementById('issuerPickerOverlay').classList.add('open');
@@ -3344,7 +3419,7 @@ function rebuildRukovPpuFilter() {
 
 function openRukovPicker() {
   if (!currentUser) { openLoginModal(); return; }
-  if (_personnelStatus === 'loading') { _openPickerWhenReady(() => openRukovPicker()); return; }
+  if (_personnelStatus !== 'ready') { _openPickerWhenReady(() => openRukovPicker()); return; }
   if (!receiversList.length) { openNoEmployeeDataModal(); return; }
   renderRukovList();
   document.getElementById('rukovPickerOverlay').classList.add('open');
@@ -3477,6 +3552,7 @@ function _resetOrgPersonnelData() {
   orgRooms = {};
   orgWorkTypes = [];
   orgApplicationTypes = [];
+  orgPprData = [];
   rebuildIssuerPpuFilter();
   rebuildCrewPpuFilter();
   rebuildRukovPpuFilter();
@@ -3598,6 +3674,26 @@ function loadOrgPersonnel() {
           if (ap && !_seenApp.has(ap)) { _seenApp.add(ap); orgApplicationTypes.push(ap); }
         }
       }
+      // ППР-реестр: колонки «ППР - блок», «ППР - объект», «ППР - номер», «ППР - заголовок»
+      const iPprBlok  = hdrs.findIndex(h => h.includes('ппр') && (h.includes('блок') || h.includes('bloc')));
+      const iPprObj   = hdrs.findIndex(h => h.includes('ппр') && h.includes('объект'));
+      const iPprNom   = hdrs.findIndex(h => h.includes('ппр') && (h.includes('номер') || h.includes('№')));
+      const iPprHdr   = hdrs.findIndex(h => h.includes('ппр') && h.includes('заголовок'));
+      orgPprData = [];
+      if (iPprBlok >= 0 && iPprObj >= 0 && iPprNom >= 0) {
+        const _seenPpr = new Set();
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          const blok = (r[iPprBlok] || '').trim();
+          const obj  = (r[iPprObj]  || '').trim();
+          const nom  = (r[iPprNom]  || '').trim();
+          const hdr  = (iPprHdr >= 0 ? r[iPprHdr] : '').trim();
+          if (!blok || !nom) continue;
+          const key = blok + '||' + obj + '||' + nom;
+          if (!_seenPpr.has(key)) { _seenPpr.add(key); orgPprData.push({ blok, obj, nom, hdr }); }
+        }
+      }
+
       // Определить участок текущего пользователя
       if (currentUser) {
         const me = allEmployeesList.find(e => e.fio.toLowerCase() === currentUser.fio.toLowerCase());
@@ -3611,6 +3707,7 @@ function loadOrgPersonnel() {
       rebuildCrewPpuFilter();
       rebuildRukovPpuFilter();
       updateCrewPickerBtn();
+      _updatePprPickBtn();
       renderCustomCheckboxes();
       // Восстановить состояния чекбоксов из orgDangers после асинхронной загрузки Sheets
       try {
@@ -3702,6 +3799,9 @@ function addRow() {
   const id = rowCount;
 
   tr.innerHTML = `
+    <td class="td-drag" draggable="false" title="Перетащить строку">
+      <span class="drag-handle">⠿</span>
+    </td>
     <td class="td-num">${id}</td>
     <td class="cell-edit" contenteditable="true" tabindex="0" data-col="0" data-placeholder="Иванов Иван Иванович"></td>
     <td class="cell-edit" contenteditable="true" tabindex="0" data-col="1" data-placeholder="Электромонтажник"></td>
@@ -3818,6 +3918,61 @@ function updateExecCount() {
   const n = document.querySelectorAll('#execBody tr').length;
   document.getElementById('execCount').textContent = n > 0 ? `Всего: ${n} чел.` : '';
 }
+
+// ─── Drag-and-Drop для строк таблицы исполнителей ─────────────────────────
+let _dndSrc = null;
+
+document.addEventListener('mousedown', e => {
+  const handle = e.target.closest('.td-drag');
+  if (!handle) return;
+  const tr = handle.closest('tr');
+  if (!tr) return;
+  tr.setAttribute('draggable', 'true');
+  e.preventDefault();
+});
+
+document.addEventListener('dragstart', e => {
+  const tr = e.target.closest('tr');
+  if (!tr || !tr.closest('#execBody')) return;
+  _dndSrc = tr;
+  tr.classList.add('dnd-dragging');
+  e.dataTransfer.effectAllowed = 'move';
+});
+
+document.addEventListener('dragover', e => {
+  if (!_dndSrc) return;
+  const tr = e.target.closest('tr');
+  if (!tr || tr === _dndSrc || !tr.closest('#execBody')) return;
+  e.preventDefault();
+  document.querySelectorAll('#execBody tr.dnd-over').forEach(r => r.classList.remove('dnd-over'));
+  tr.classList.add('dnd-over');
+});
+
+document.addEventListener('drop', e => {
+  if (!_dndSrc) return;
+  const tr = e.target.closest('tr');
+  if (!tr || tr === _dndSrc || !tr.closest('#execBody')) return;
+  e.preventDefault();
+  const tbody = document.getElementById('execBody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const srcIdx = rows.indexOf(_dndSrc);
+  const tgtIdx = rows.indexOf(tr);
+  if (srcIdx < tgtIdx) {
+    tbody.insertBefore(_dndSrc, tr.nextSibling);
+  } else {
+    tbody.insertBefore(_dndSrc, tr);
+  }
+  renumberRows();
+  scheduleSave();
+});
+
+document.addEventListener('dragend', e => {
+  if (!_dndSrc) return;
+  _dndSrc.classList.remove('dnd-dragging');
+  _dndSrc.setAttribute('draggable', 'false');
+  document.querySelectorAll('#execBody tr.dnd-over').forEach(r => r.classList.remove('dnd-over'));
+  _dndSrc = null;
+});
 
 // ─── Форматирование даты в формат «дд» месяц гггг г. ──────────────────────
 const RU_MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
@@ -4250,8 +4405,10 @@ async function buildPPRVDocument(data) {
     : 'Строп двухветвевой Safe-Tec LAS212 (либо аналог)';
 
   // "Требования к исполнителям" — группировка по должности и группе по высоте
+  // Сотрудники с группой высоты = 0 исключаются из требований и из ознакомления
+  const _execForHeight = data.executors.filter(e => String(e.grVys || '').trim() !== '0');
   const trebMap = {};
-  data.executors.forEach(e => {
+  _execForHeight.forEach(e => {
     const d = (e.dolzh || '').trim();
     if (!d) return;
     const grp = String(e.grVys || '2').trim();
@@ -4310,7 +4467,8 @@ async function buildPPRVDocument(data) {
   });
 
   // Состав бригады (включая ответственного исполнителя), со столбцом для подписи
-  const brigade = data.executors;
+  // Сотрудники с группой 0 не включаются в ППРв (уже отфильтровано в _execForHeight)
+  const brigade = _execForHeight;
   const colBNum = 600, colBSign = 2200;
   const colBFio = (CONTENT_W - colBNum - colBSign) * 0.45;
   const colBDolzh = CONTENT_W - colBNum - colBFio - colBSign;
@@ -4388,7 +4546,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.33';
+const CURRENT_VERSION = 'v3.34';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5477,12 +5635,7 @@ async function downloadKarta(btn) {
 
     zip.file('word/document.xml', xml);
     const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'Карта ОПФ к наряду №' + (data.nomer || '____') + '.docx';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    _refreshPersonnelCache();
+    downloadBlob(blob, 'Карта ОПФ к наряду №' + (data.nomer || '____') + '.docx');
   } catch(e) {
     alert('Ошибка: ' + e.message);
   } finally {
@@ -5854,6 +6007,17 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.34', date: '06.07.2026',
+    changes: [
+      'Исправлен счётчик скачиваний: кнопка «Карта ОПФ» теперь тоже фиксирует скачивание',
+      'Исправлен баг с базой данных при первом входе: при ошибке загрузки повторная попытка запускается автоматически при нажатии на пикер',
+      'Добавлен Drag-and-Drop для строк таблицы исполнителей — перетаскивайте строки за иконку слева',
+      'Сотрудники с группой высоты «0» исключены из ППРв и списка требований к исполнителям',
+      'Каскадный пикер ППР из реестра: выбор по блоку, объекту и номеру',
+      'Адаптивная вёрстка для мобильных устройств — поля больше не уходят за границы экрана',
+    ]
+  },
   {
     version: 'v3.33', date: '06.07.2026',
     changes: [
@@ -7391,6 +7555,71 @@ function _rlpLoadRooms() {
   return orgRooms || {};
 }
 
+// ─── ППР-пикер ────────────────────────────────────────────────────────────
+function openPprPicker() {
+  if (!orgPprData.length) return;
+  document.getElementById('pprPickerOverlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  const bloks = [...new Set(orgPprData.map(p => p.blok))].sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
+  const blokSel = document.getElementById('pprBlokSel');
+  blokSel.innerHTML = '<option value="">— выберите блок —</option>' + bloks.map(b => `<option value="${b}">${b}</option>`).join('');
+  document.getElementById('pprObjSel').innerHTML = '<option value="">— сначала выберите блок —</option>';
+  document.getElementById('pprNomSel').innerHTML = '<option value="">— сначала выберите объект —</option>';
+  document.getElementById('pprTitleHint').style.display = 'none';
+  document.getElementById('pprSaveBtn').disabled = true;
+  document.getElementById('pprSaveBtn').style.opacity = '.5';
+}
+
+function closePprPicker() {
+  document.getElementById('pprPickerOverlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function pprFillObjects() {
+  const blok = document.getElementById('pprBlokSel').value;
+  const objs = blok ? [...new Set(orgPprData.filter(p => p.blok === blok).map(p => p.obj))].sort((a, b) => a.localeCompare(b, 'ru', { numeric: true })) : [];
+  document.getElementById('pprObjSel').innerHTML = '<option value="">— выберите объект —</option>' + objs.map(o => `<option value="${o}">${o}</option>`).join('');
+  document.getElementById('pprNomSel').innerHTML = '<option value="">— сначала выберите объект —</option>';
+  document.getElementById('pprTitleHint').style.display = 'none';
+  document.getElementById('pprSaveBtn').disabled = true;
+  document.getElementById('pprSaveBtn').style.opacity = '.5';
+}
+
+function pprFillNumbers() {
+  const blok = document.getElementById('pprBlokSel').value;
+  const obj  = document.getElementById('pprObjSel').value;
+  const items = orgPprData.filter(p => p.blok === blok && p.obj === obj);
+  document.getElementById('pprNomSel').innerHTML = '<option value="">— выберите номер ППР —</option>' +
+    items.map(p => `<option value="${p.nom}" data-hdr="${(p.hdr || '').replace(/"/g,'&quot;')}">${p.nom}${p.hdr ? ' (' + p.hdr + ')' : ''}</option>`).join('');
+  document.getElementById('pprTitleHint').style.display = 'none';
+  document.getElementById('pprSaveBtn').disabled = true;
+  document.getElementById('pprSaveBtn').style.opacity = '.5';
+}
+
+function pprShowTitle() {
+  const sel = document.getElementById('pprNomSel');
+  const opt = sel.options[sel.selectedIndex];
+  const hint = document.getElementById('pprTitleHint');
+  const btn  = document.getElementById('pprSaveBtn');
+  if (!sel.value) { hint.style.display = 'none'; btn.disabled = true; btn.style.opacity = '.5'; return; }
+  const hdr = opt?.dataset?.hdr || '';
+  if (hdr) { hint.textContent = hdr; hint.style.display = 'block'; } else { hint.style.display = 'none'; }
+  btn.disabled = false; btn.style.opacity = '1';
+}
+
+function savePprPicker() {
+  const nom = document.getElementById('pprNomSel').value;
+  if (!nom) return;
+  const el = document.getElementById('ppr');
+  if (el) { el.value = nom; el.dispatchEvent(new Event('input')); }
+  closePprPicker();
+}
+
+function _updatePprPickBtn() {
+  const btn = document.getElementById('pprPickBtn');
+  if (btn) btn.style.display = orgPprData.length ? 'flex' : 'none';
+}
+
 function openRoomListPopup() {
   _rlpSelected = new Map();
   document.getElementById('roomListPopup').style.display = 'block';
@@ -8203,6 +8432,41 @@ function copyDevEmail() {
     </div>
     <div style="padding:0 20px 16px;display:flex;justify-content:flex-end">
       <button onclick="closeNoEmployeeDataModal()" style="background:var(--accent);color:white;border:none;border-radius:6px;padding:7px 20px;cursor:pointer;font-size:13px;font-weight:600">Понятно</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PPR Picker Modal ── -->
+<div id="pprPickerOverlay" style="display:none;position:fixed;inset:0;z-index:9750;background:rgba(0,0,0,.5)" onclick="if(event.target===this)closePprPicker()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.3);width:460px;max-width:95vw;overflow:hidden">
+    <div style="background:var(--navy);color:white;padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-weight:700;font-size:14px">Выбор ППР из реестра</span>
+      <button onclick="closePprPicker()" style="background:rgba(255,255,255,.15);border:none;color:white;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1">✕</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:11px;font-weight:700;color:var(--gray-700);text-transform:uppercase;letter-spacing:.2px;display:block;margin-bottom:5px">Блок</label>
+        <select id="pprBlokSel" onchange="pprFillObjects()" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;color:var(--text);background:var(--surface)">
+          <option value="">— выберите блок —</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;color:var(--gray-700);text-transform:uppercase;letter-spacing:.2px;display:block;margin-bottom:5px">Объект</label>
+        <select id="pprObjSel" onchange="pprFillNumbers()" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;color:var(--text);background:var(--surface)">
+          <option value="">— сначала выберите блок —</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;color:var(--gray-700);text-transform:uppercase;letter-spacing:.2px;display:block;margin-bottom:5px">ППР — номер</label>
+        <select id="pprNomSel" onchange="pprShowTitle()" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;color:var(--text);background:var(--surface)">
+          <option value="">— сначала выберите объект —</option>
+        </select>
+        <div id="pprTitleHint" style="display:none;margin-top:6px;font-size:12px;color:var(--gray-700);background:var(--accent-light);border-radius:6px;padding:7px 10px;line-height:1.5"></div>
+      </div>
+    </div>
+    <div style="padding:0 20px 18px;display:flex;justify-content:flex-end;gap:8px">
+      <button onclick="closePprPicker()" style="background:transparent;border:1.5px solid var(--gray-200);border-radius:6px;padding:7px 18px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray-700)">Отмена</button>
+      <button id="pprSaveBtn" onclick="savePprPicker()" disabled style="background:var(--accent);color:white;border:none;border-radius:6px;padding:7px 20px;cursor:pointer;font-size:13px;font-weight:600;opacity:.5">Выбрать</button>
     </div>
   </div>
 </div>
