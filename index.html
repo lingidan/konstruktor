@@ -98,7 +98,7 @@
   .field label .req { color: #e05252; margin-left: 2px; }
   .field .hint  { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
 
-  input[type="text"], input[type="date"], select {
+  input[type="text"], input[type="date"], select, .field textarea {
     width: 100%; padding: 9px 12px;
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius);
@@ -106,7 +106,7 @@
     transition: border-color .15s, box-shadow .15s;
     font-family: inherit; appearance: none; -webkit-appearance: none;
   }
-  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46,122,191,.18); }
+  input:focus, select:focus, .field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46,122,191,.18); }
   input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .6; }
   input[type="date"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(46,122,191,.25); border-width: 2px; }
   input[readonly] { background: var(--gray-50); color: var(--gray-700); cursor: default; }
@@ -1486,6 +1486,28 @@
     <span id="adminRegCount" style="display:none;background:#e05252;color:white;
           font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:4px;"></span>
   </button>
+  <button id="adminOzpBtn" onclick="openOzpPanel()"
+    style="background:var(--surface);color:var(--navy);border:2px solid var(--navy);border-radius:28px;
+           padding:11px 20px;font-size:13px;font-weight:600;cursor:pointer;
+           box-shadow:0 4px 18px rgba(26,58,92,.18);display:flex;gap:8px;align-items:center;">
+    &#128230; Скачать ОЗП
+  </button>
+</div>
+
+<!-- Модальное окно «Файлы ОЗП» -->
+<div id="ozpOverlay"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:980;
+            align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border-radius:16px;max-width:440px;width:92%;
+              max-height:80vh;display:flex;flex-direction:column;overflow:hidden;
+              box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="padding:18px 20px;border-bottom:1px solid var(--gray-200);
+                display:flex;justify-content:space-between;align-items:center;">
+      <b style="font-size:16px;">Файлы ОЗП</b>
+      <span onclick="closeOzpPanel()" style="cursor:pointer;font-size:22px;line-height:1;color:var(--gray-400);">&times;</span>
+    </div>
+    <div id="ozpBody" style="overflow-y:auto;padding:16px 20px;flex:1;display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
 </div>
 
 <!-- Модальное окно «Заявки на регистрацию» -->
@@ -1644,7 +1666,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.43</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.45</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1734,7 +1756,14 @@
   </button>
 </div>
 
-<div class="container">
+<div id="naryadTypeSwitch" style="display:none;max-width:900px;margin:16px auto 0;padding:0 20px;gap:8px;">
+  <button id="btnTypeGeneral" onclick="switchNaryadType('general')"
+    style="background:var(--navy);color:#fff;border:none;border-radius:8px 8px 0 0;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;">Общестрой</button>
+  <button id="btnTypeOzp" onclick="switchNaryadType('ozp')"
+    style="background:var(--surface);color:var(--navy);border:2px solid var(--navy);border-bottom:none;border-radius:8px 8px 0 0;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;">ОЗП</button>
+</div>
+
+<div id="generalContainer" class="container">
 
   <!-- ═══════════════════════════════════════════════════════ БЛОК 1 -->
   <div class="card">
@@ -1995,7 +2024,126 @@
     <button onclick="fillTestData()" style="background:#6c5ce7;color:#fff;border:none;padding:8px 24px;border-radius:6px;cursor:pointer;font-size:13px;opacity:.7">Тест — заполнить случайными данными</button>
   </div>
 
-</div><!-- /container -->
+</div><!-- /generalContainer -->
+
+<div id="ozpContainer" class="container" style="display:none">
+
+  <div class="card">
+    <div class="card-header">
+      <span class="block-num">ОЗП</span>
+      <h2>Наряд-допуск на работы в ограниченном и замкнутом пространстве</h2>
+    </div>
+    <div class="card-body">
+
+      <button onclick="pullFromGeneral()" style="background:var(--surface);color:var(--navy);border:2px solid var(--navy);
+        border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;">
+        ⇩ Подтянуть данные из общестроительного
+      </button>
+
+      <div class="grid grid-2">
+        <div class="field col-span-2">
+          <label>Организация</label>
+          <input type="text" id="ozpOrg" placeholder="ООО «Название»">
+        </div>
+        <div class="field">
+          <label>Подразделение</label>
+          <input type="text" id="ozpPodr" placeholder="Производственный участок №...">
+        </div>
+        <div class="field">
+          <label>Номер наряда ОЗП</label>
+          <input type="text" id="ozpNomer" placeholder="">
+        </div>
+        <div class="field">
+          <label>Дата выдачи <span class="req">*</span></label>
+          <input type="date" id="ozpDateStart" oninput="checkOzpButtons()">
+        </div>
+        <div class="field">
+          <label>Действителен до <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(1 смена, продление — до 15 дней)</span></label>
+          <input type="date" id="ozpDateEnd">
+        </div>
+
+        <div class="field">
+          <label>ФИО руководителя работ <span class="req">*</span></label>
+          <input type="text" id="ozpRukovFio" placeholder="Иванов Иван Иванович" oninput="checkOzpButtons()">
+        </div>
+        <div class="field">
+          <label>Должность руководителя</label>
+          <input type="text" id="ozpRukovDolzh" placeholder="">
+        </div>
+
+        <div class="field">
+          <label>ФИО ответственного исполнителя <span class="req">*</span></label>
+          <input type="text" id="ozpIspolnFio" placeholder="" oninput="checkOzpButtons()">
+        </div>
+        <div class="field">
+          <label>Должность исполнителя</label>
+          <input type="text" id="ozpIspolnDolzh" placeholder="">
+        </div>
+
+        <div class="field">
+          <label>ФИО наблюдающего <span class="req">*</span></label>
+          <input type="text" id="ozpNabludFio" placeholder="" oninput="checkOzpButtons()">
+        </div>
+        <div class="field">
+          <label>Должность наблюдающего</label>
+          <input type="text" id="ozpNabludDolzh" placeholder="">
+        </div>
+
+        <div class="field">
+          <label>ФИО спасателя <span class="req">*</span></label>
+          <input type="text" id="ozpSpasFio" placeholder="" oninput="checkOzpButtons()">
+        </div>
+        <div class="field">
+          <label>Должность спасателя</label>
+          <input type="text" id="ozpSpasDolzh" placeholder="">
+        </div>
+
+        <div class="field col-span-2">
+          <label>Место выполнения работ <span class="req">*</span></label>
+          <input type="text" id="ozpMesto" placeholder="Здание, помещение, отметка" oninput="checkOzpButtons()">
+        </div>
+        <div class="field col-span-2">
+          <label>Содержание работ <span class="req">*</span></label>
+          <input type="text" id="ozpSoderzhanie" placeholder="" oninput="checkOzpButtons()">
+        </div>
+
+        <div class="field col-span-2">
+          <label>Состав бригады <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(по одному ФИО на строку)</span></label>
+          <textarea id="ozpBrigada" rows="4" placeholder="Иванов Иван Иванович&#10;Петров Пётр Петрович"></textarea>
+        </div>
+
+        <div class="field col-span-2">
+          <label>Материалы и инструменты</label>
+          <input type="text" id="ozpMaterialy" placeholder="">
+        </div>
+        <div class="field col-span-2">
+          <label>Средства связи</label>
+          <input type="text" id="ozpSvyaz" placeholder="Мобильный телефон, рация...">
+        </div>
+      </div>
+
+      <h3 style="margin:24px 0 8px;font-size:15px;">Опасные и вредные производственные факторы ОЗП</h3>
+      <div class="grid grid-2" id="ozpFactorsGrid"></div>
+
+      <h3 style="margin:24px 0 8px;font-size:15px;">Системы обеспечения безопасности в ОЗП</h3>
+      <div class="grid grid-2" id="ozpSizGrid"></div>
+
+    </div>
+  </div>
+
+  <div class="dl-section visible" id="ozpDlSection">
+    <div class="dl-grid">
+      <button class="btn-dl b-narad" id="btnOzpDl" onclick="downloadOzp(this)" disabled>
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+        Скачать Наряд ОЗП
+      </button>
+    </div>
+    <div id="ozpDlPlaceholder" style="text-align:center;color:var(--gray-400);font-size:13px;margin-top:8px;">
+      Заполните обязательные поля (отмечены <span style="color:#e05252;font-weight:700;margin:0 4px">*</span>) для появления кнопки скачивания
+    </div>
+  </div>
+
+</div><!-- /ozpContainer -->
 
 <script src="https://unpkg.com/docx@9.7.1/dist/index.umd.cjs"></script>
 <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2662,6 +2810,11 @@ function _showAdminBtn() {
   const isAdmin = currentUser && (currentUser.login || '').toLowerCase() === 'лингидан';
   wrap.style.display = isAdmin ? 'flex' : 'none';
   if (isAdmin) _refreshAdminBadge();
+  const typeSwitch = document.getElementById('naryadTypeSwitch');
+  if (typeSwitch) {
+    typeSwitch.style.display = isAdmin ? 'flex' : 'none';
+    if (!isAdmin) switchNaryadType('general');
+  }
 }
 
 async function _refreshAdminBadge() {
@@ -2676,6 +2829,36 @@ async function _refreshAdminBadge() {
       badge.style.display = 'none';
     }
   } catch(e) {}
+}
+
+// ── Файлы ОЗП (только для администратора) ─────────────────────────────────────
+const OZP_FILES = [
+  'Наряд на озп.doc',
+  'Огневой наряд при необходимости в озп.doc',
+  'знак озп.docx',
+  'Лист ознкомления.docx',
+  'План мероприятий ОЗП.docx',
+  'План эвакуации и спасения ОЗП .docx',
+  'ППР в ОЗП.docx',
+  'ППРВ ОЗП.docx',
+];
+
+function openOzpPanel() {
+  if (!currentUser || (currentUser.login || '').toLowerCase() !== 'лингидан') return;
+  const overlay = document.getElementById('ozpOverlay');
+  const body = document.getElementById('ozpBody');
+  body.innerHTML = OZP_FILES.map(name => {
+    const href = 'ozp-files/' + encodeURIComponent(name);
+    return '<a href="' + href + '" download="' + name.replace(/"/g, '&quot;') + '" ' +
+      'style="display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--gray-200);' +
+      'border-radius:10px;text-decoration:none;color:var(--navy);font-size:14px;font-weight:500;">' +
+      '&#128196; ' + name + '</a>';
+  }).join('');
+  overlay.style.display = 'flex';
+}
+
+function closeOzpPanel() {
+  document.getElementById('ozpOverlay').style.display = 'none';
 }
 
 async function openAdminRegPanel() {
@@ -4588,7 +4771,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.43';
+const CURRENT_VERSION = 'v3.45';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5423,6 +5606,15 @@ function clearFormUI(withRows) {
   if (s10) { s10.value = '15'; applySec10Rows(); }
   setEndDate();
   checkButtons();
+  ['ozpOrg','ozpPodr','ozpNomer','ozpDateStart','ozpDateEnd','ozpRukovFio','ozpRukovDolzh',
+   'ozpIspolnFio','ozpIspolnDolzh','ozpNabludFio','ozpNabludDolzh','ozpSpasFio','ozpSpasDolzh',
+   'ozpMesto','ozpSoderzhanie','ozpBrigada','ozpMaterialy','ozpSvyaz'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  OZP_FACTORS.forEach((_, i) => { const el = document.getElementById('ozpFactor' + i); if (el) el.checked = false; });
+  OZP_SIZ_ROWS.forEach(row => { const el = document.getElementById(row.id); if (el) el.value = ''; });
+  switchNaryadType('general');
+  checkOzpButtons();
 }
 
 function saveFormData() {
@@ -5455,9 +5647,47 @@ function saveFormData() {
     sec10Rows:  document.getElementById('sec10Rows').value,
     cbStates,
     execRows,
+    naryadType: _naryadType,
+    ozp: _collectOzpSnapshot(),
   };
   const _sk = tabsMeta.activeId ? tabStorageKey(tabsMeta.activeId) : STORAGE_KEY;
   try { localStorage.setItem(_sk, JSON.stringify(snap)); } catch(e) {}
+}
+
+function _collectOzpSnapshot() {
+  const g = id => document.getElementById(id)?.value || '';
+  const ozpFactors = {};
+  OZP_FACTORS.forEach((_, i) => { const el = document.getElementById('ozpFactor' + i); if (el) ozpFactors[i] = el.checked; });
+  const sizValues = {};
+  OZP_SIZ_ROWS.forEach(row => { sizValues[row.id] = g(row.id); });
+  return {
+    org: g('ozpOrg'), podr: g('ozpPodr'), nomer: g('ozpNomer'),
+    dateStart: g('ozpDateStart'), dateEnd: g('ozpDateEnd'),
+    rukovFio: g('ozpRukovFio'), rukovDolzh: g('ozpRukovDolzh'),
+    ispolnFio: g('ozpIspolnFio'), ispolnDolzh: g('ozpIspolnDolzh'),
+    nabludFio: g('ozpNabludFio'), nabludDolzh: g('ozpNabludDolzh'),
+    spasFio: g('ozpSpasFio'), spasDolzh: g('ozpSpasDolzh'),
+    mesto: g('ozpMesto'), soderzhanie: g('ozpSoderzhanie'),
+    brigada: g('ozpBrigada'), materialy: g('ozpMaterialy'), svyaz: g('ozpSvyaz'),
+    ozpFactors, sizValues,
+  };
+}
+
+function _applyOzpSnapshot(ozp) {
+  _renderOzpFactorsAndSiz();
+  const set = (id, val) => { if (val == null) return; const el = document.getElementById(id); if (el) el.value = val; };
+  if (!ozp) return;
+  set('ozpOrg', ozp.org); set('ozpPodr', ozp.podr); set('ozpNomer', ozp.nomer);
+  set('ozpDateStart', ozp.dateStart); set('ozpDateEnd', ozp.dateEnd);
+  set('ozpRukovFio', ozp.rukovFio); set('ozpRukovDolzh', ozp.rukovDolzh);
+  set('ozpIspolnFio', ozp.ispolnFio); set('ozpIspolnDolzh', ozp.ispolnDolzh);
+  set('ozpNabludFio', ozp.nabludFio); set('ozpNabludDolzh', ozp.nabludDolzh);
+  set('ozpSpasFio', ozp.spasFio); set('ozpSpasDolzh', ozp.spasDolzh);
+  set('ozpMesto', ozp.mesto); set('ozpSoderzhanie', ozp.soderzhanie);
+  set('ozpBrigada', ozp.brigada); set('ozpMaterialy', ozp.materialy); set('ozpSvyaz', ozp.svyaz);
+  if (ozp.ozpFactors) Object.entries(ozp.ozpFactors).forEach(([i, checked]) => { const el = document.getElementById('ozpFactor' + i); if (el) el.checked = checked; });
+  if (ozp.sizValues) Object.entries(ozp.sizValues).forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.value = val; });
+  checkOzpButtons();
 }
 
 // ─── История отмены/возврата ──────────────────────────────────────────────────
@@ -5633,6 +5863,8 @@ function loadFormData() {
   }
 
   checkButtons();
+  switchNaryadType(snap.naryadType === 'ozp' ? 'ozp' : 'general');
+  _applyOzpSnapshot(snap.ozp);
 }
 
 
@@ -6051,8 +6283,234 @@ async function buildOgnevoyDocument(data) {
   return Packer.toBlob(doc);
 }
 
+// ─── Конструктор ОЗП (ограниченное и замкнутое пространство) ──────────────────
+// Роли и структура — по Правилам ОТ при работе в ОЗП, Приказ Минтруда №902н
+const OZP_FACTORS = [
+  'Недостаток кислорода и (или) загазованность воздуха ядовитыми и взрывоопасными газами',
+  'Особые температурные условия и неудовлетворительный температурный режим (в т.ч. перепад температур)',
+  'Биологическая опасность',
+  'Недостаточная освещенность рабочей зоны',
+  'Чрезмерный шум и вибрация',
+  'Тяжесть и напряженность трудового процесса',
+  'Аэрозоли преимущественно фиброгенного действия',
+  'Скорость движения воздуха',
+  'Падение предметов на работников',
+  'Возможность травмирования при открывании и закрывании крышек люков',
+  'Повышенная загрязненность и запыленность воздуха ограниченного пространства',
+  'Повышенная влажность',
+];
+
+const OZP_SIZ_ROWS = [
+  { id: 'ozpSiz1', label: 'Средства индивидуальной защиты, в т.ч. СИЗОД' },
+  { id: 'ozpSiz2', label: 'Автономные изолирующие средства защиты органов дыхания' },
+  { id: 'ozpSiz3', label: 'Удерживающие системы' },
+  { id: 'ozpSiz4', label: 'Системы позиционирования' },
+  { id: 'ozpSiz5', label: 'Страховочные системы' },
+  { id: 'ozpSiz6', label: 'Самоспасатели и системы эвакуации/спасения' },
+];
+
+function _renderOzpFactorsAndSiz() {
+  const fGrid = document.getElementById('ozpFactorsGrid');
+  if (fGrid && !fGrid.dataset.rendered) {
+    fGrid.innerHTML = OZP_FACTORS.map((name, i) =>
+      `<label class="field col-span-2" style="flex-direction:row;align-items:center;gap:8px;font-weight:400;">
+         <input type="checkbox" id="ozpFactor${i}"> ${name}
+       </label>`
+    ).join('');
+    fGrid.dataset.rendered = '1';
+  }
+  const sGrid = document.getElementById('ozpSizGrid');
+  if (sGrid && !sGrid.dataset.rendered) {
+    sGrid.innerHTML = OZP_SIZ_ROWS.map(row =>
+      `<div class="field col-span-2">
+         <label>${row.label}</label>
+         <input type="text" id="${row.id}" placeholder="">
+       </div>`
+    ).join('');
+    sGrid.dataset.rendered = '1';
+  }
+}
+
+let _naryadType = 'general';
+function switchNaryadType(type) {
+  _naryadType = type;
+  const gc = document.getElementById('generalContainer');
+  const oc = document.getElementById('ozpContainer');
+  const bg = document.getElementById('btnTypeGeneral');
+  const bo = document.getElementById('btnTypeOzp');
+  if (gc) gc.style.display = type === 'general' ? '' : 'none';
+  if (oc) oc.style.display = type === 'ozp' ? '' : 'none';
+  if (bg) { bg.style.background = type === 'general' ? 'var(--navy)' : 'var(--surface)'; bg.style.color = type === 'general' ? '#fff' : 'var(--navy)'; }
+  if (bo) { bo.style.background = type === 'ozp' ? 'var(--navy)' : 'var(--surface)'; bo.style.color = type === 'ozp' ? '#fff' : 'var(--navy)'; }
+  if (type === 'ozp') { _renderOzpFactorsAndSiz(); checkOzpButtons(); }
+}
+
+function pullFromGeneral() {
+  const g = id => document.getElementById(id)?.value.trim() || '';
+  document.getElementById('ozpOrg').value = g('org');
+  document.getElementById('ozpMesto').value = g('mesto');
+  document.getElementById('ozpSoderzhanie').value = g('vidRabot');
+  document.getElementById('ozpRukovFio').value = g('rukovFio');
+  document.getElementById('ozpRukovDolzh').value = g('rukovDolzh');
+  document.getElementById('ozpDateStart').value = g('dateStart');
+  const rows = [];
+  document.querySelectorAll('#execBody tr').forEach(tr => {
+    const c = tr.querySelectorAll('.cell-edit');
+    const fio = c[0]?.textContent.trim();
+    if (fio) rows.push(fio);
+  });
+  if (rows.length) document.getElementById('ozpBrigada').value = rows.join('\n');
+  checkOzpButtons();
+}
+
+function checkOzpButtons() {
+  const g = id => document.getElementById(id)?.value.trim() || '';
+  const ready = g('ozpDateStart') && g('ozpRukovFio') && g('ozpIspolnFio') &&
+                g('ozpNabludFio') && g('ozpSpasFio') && g('ozpMesto') && g('ozpSoderzhanie');
+  const btn = document.getElementById('btnOzpDl');
+  const placeholder = document.getElementById('ozpDlPlaceholder');
+  if (btn) btn.disabled = !ready;
+  if (placeholder) placeholder.style.display = ready ? 'none' : '';
+}
+
+function collectOzpFormData() {
+  const g = id => document.getElementById(id)?.value.trim() || '';
+  const activeFactors = OZP_FACTORS.filter((_, i) => document.getElementById('ozpFactor' + i)?.checked);
+  const sizRows = OZP_SIZ_ROWS.map(row => ({ label: row.label, value: g(row.id) })).filter(r => r.value);
+  return {
+    org: g('ozpOrg'), podr: g('ozpPodr'), nomer: g('ozpNomer'),
+    dateStart: g('ozpDateStart'), dateEnd: g('ozpDateEnd'),
+    rukovFio: g('ozpRukovFio'), rukovDolzh: g('ozpRukovDolzh'),
+    ispolnFio: g('ozpIspolnFio'), ispolnDolzh: g('ozpIspolnDolzh'),
+    nabludFio: g('ozpNabludFio'), nabludDolzh: g('ozpNabludDolzh'),
+    spasFio: g('ozpSpasFio'), spasDolzh: g('ozpSpasDolzh'),
+    mesto: g('ozpMesto'), soderzhanie: g('ozpSoderzhanie'),
+    brigada: g('ozpBrigada').split('\n').map(s => s.trim()).filter(Boolean),
+    materialy: g('ozpMaterialy'), svyaz: g('ozpSvyaz'),
+    activeFactors, sizRows,
+  };
+}
+
+async function downloadOzp(btn) {
+  const data = collectOzpFormData();
+  const orig = btn.innerHTML;
+  btn.innerHTML = '⏳ Формирование документа...';
+  btn.disabled = true;
+  try {
+    const blob = await buildOzpDocument(data);
+    downloadBlob(blob, `Наряд-допуск ОЗП №${data.nomer || '_'}.docx`);
+  } catch (e) {
+    console.error(e);
+    alert('Ошибка при формировании документа: ' + e.message);
+  } finally {
+    btn.innerHTML = orig;
+    checkOzpButtons();
+  }
+}
+
+async function buildOzpDocument(data) {
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+          AlignmentType, BorderStyle, WidthType } = docx;
+
+  const FONT = 'Times New Roman';
+  const bd = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
+  const borders = { top: bd, bottom: bd, left: bd, right: bd };
+
+  function run(text, opts = {}) {
+    return new TextRun({ text, font: FONT, size: opts.size || 20, bold: opts.bold });
+  }
+  function p(text, opts = {}) {
+    return new Paragraph({ alignment: opts.align, spacing: { after: opts.after ?? 80, line: 240, lineRule: 'auto' }, children: [run(text, opts)] });
+  }
+  function cell(text, opts = {}) {
+    return new TableCell({ borders, width: opts.width ? { size: opts.width, type: WidthType.PERCENTAGE } : undefined,
+      children: [p(text, { size: 18, after: 0, ...opts })] });
+  }
+
+  const fmtDate = d => d ? d.split('-').reverse().join('.') : '____________';
+
+  const children = [
+    p(`НАРЯД-ДОПУСК № ${data.nomer || '_______'}`, { bold: true, size: 28, align: AlignmentType.CENTER }),
+    p('на производство работ в ограниченных и замкнутых пространствах', { bold: true, size: 22, align: AlignmentType.CENTER, after: 200 }),
+
+    p(`Организация: ${data.org || '_______________________________'}`),
+    p(`Подразделение: ${data.podr || '_______________________________'}`),
+    p(`Выдан: «${fmtDate(data.dateStart)}»       Действителен до: «${fmtDate(data.dateEnd)}»`, { after: 200 }),
+
+    p(`Ответственный руководитель работ: ${[data.rukovFio, data.rukovDolzh].filter(Boolean).join(', ') || '_______________________________'}`),
+    p(`Ответственный исполнитель (производитель) работ: ${[data.ispolnFio, data.ispolnDolzh].filter(Boolean).join(', ') || '_______________________________'}`),
+    p(`Наблюдающий: ${[data.nabludFio, data.nabludDolzh].filter(Boolean).join(', ') || '_______________________________'}`),
+    p(`Спасатель: ${[data.spasFio, data.spasDolzh].filter(Boolean).join(', ') || '_______________________________'}`, { after: 200 }),
+
+    p(`Место выполнения работ: ${data.mesto || '_______________________________'}`),
+    p(`Содержание работ: ${data.soderzhanie || '_______________________________'}`, { after: 200 }),
+  ];
+
+  children.push(p('Состав исполнителей работ (члены бригады):', { bold: true, after: 80 }));
+  if (data.brigada.length) {
+    children.push(new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({ children: [cell('Ф.И.О.', { bold: true, width: 60 }), cell('С условиями работ ознакомлен (подпись)', { bold: true, width: 40 })] }),
+        ...data.brigada.map(fio => new TableRow({ children: [cell(fio, { width: 60 }), cell('', { width: 40 })] })),
+      ],
+    }));
+  } else {
+    children.push(p('_______________________________________________________'));
+  }
+
+  children.push(p(' ', { after: 100 }));
+  children.push(p('Опасные и вредные производственные факторы:', { bold: true, after: 80 }));
+  if (data.activeFactors.length) {
+    data.activeFactors.forEach((f, i) => children.push(p(`${i + 1}. ${f}`, { after: 40 })));
+  } else {
+    children.push(p('Не указаны', { after: 40 }));
+  }
+
+  children.push(p(' ', { after: 100 }));
+  children.push(p('Системы обеспечения безопасности работ в ОЗП:', { bold: true, after: 80 }));
+  if (data.sizRows.length) {
+    children.push(new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: data.sizRows.map(r => new TableRow({ children: [cell(r.label, { width: 50, bold: true }), cell(r.value, { width: 50 })] })),
+    }));
+  } else {
+    children.push(p('Не указаны', { after: 40 }));
+  }
+
+  children.push(p(' ', { after: 100 }));
+  children.push(p(`Материалы и инструменты: ${data.materialy || '_______________________________'}`));
+  children.push(p(`Средства связи: ${data.svyaz || '_______________________________'}`, { after: 200 }));
+
+  children.push(p('Наряд-допуск выдал: _______________________ (Ф.И.О., подпись, дата)', { after: 60 }));
+  children.push(p('Разрешение на вход в ОЗП выдал: ____________________________ (Ф.И.О., подпись, дата)', { after: 60 }));
+  children.push(p('Работа выполнена в полном объёме. Материалы, инструмент убраны. Члены бригады выведены.', { after: 60 }));
+  children.push(p('Наряд-допуск закрыт: _______________________ (Ф.И.О., подпись, дата)'));
+
+  const doc = new Document({
+    sections: [{
+      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 567, bottom: 567, left: 850, right: 850 } } },
+      children,
+    }],
+  });
+
+  return Packer.toBlob(doc);
+}
+
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.45', date: '06.07.2026',
+    changes: [
+      'Администратору добавлен тестовый конструктор наряда-допуска на работы в ОЗП (ограниченное и замкнутое пространство) — отдельный лист внутри вкладки наряда с переключателем «Общестрой / ОЗП»',
+    ]
+  },
+  {
+    version: 'v3.44', date: '06.07.2026',
+    changes: [
+      'Администратору добавлена кнопка «Скачать ОЗП» — список файлов наряда на огнезащитную пропитку',
+    ]
+  },
   {
     version: 'v3.43', date: '06.07.2026',
     changes: [
