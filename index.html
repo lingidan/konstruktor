@@ -4588,7 +4588,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.42';
+const CURRENT_VERSION = 'v3.44';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5130,6 +5130,33 @@ function applyTemplateData() {
       orgStaticData = { p3: TEMPLATE_STATIC_DATA.p3, p4rows: [...TEMPLATE_STATIC_DATA.p4rows], p5rows: [...TEMPLATE_STATIC_DATA.p5rows] };
       renderCustomCheckboxes();
     });
+}
+
+// ─── Скачивание файла-шаблона (для заполнения и отправки разработчику) ────
+
+async function downloadTemplateFile(btn) {
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Скачивание…'; }
+  try {
+    const data = await _apiCall({ action: 'getTemplateFile' });
+    if (!data.ok) throw new Error(data.error || 'fail');
+    const byteChars = atob(data.base64);
+    const bytes = new Uint8Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([bytes], { type: data.mime || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = data.filename || 'Шаблон_Конструктор.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Не удалось скачать шаблон. Попробуйте ещё раз или напишите разработчику.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+  }
 }
 
 function _simpleHash(s) {
@@ -6052,6 +6079,19 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.44', date: '06.07.2026',
+    changes: [
+      'При недоступности базы сотрудников теперь можно сразу скачать файл-шаблон для заполнения и отправки разработчику',
+    ]
+  },
+  {
+    version: 'v3.43', date: '06.07.2026',
+    changes: [
+      'В окне выбора ППР добавлен поиск по номенклатуре',
+      'Убраны декоративные тире в подписях фильтров «Блок» и «Объект»',
+    ]
+  },
   {
     version: 'v3.42', date: '06.07.2026',
     changes: [
@@ -7836,8 +7876,9 @@ function openPprPicker(_fromRetry) {
   document.body.style.overflow = 'hidden';
   const bloks = [...new Set(orgPprData.map(p => p.blok))].sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
   const blokSel = document.getElementById('pprBlokSel');
-  blokSel.innerHTML = '<option value="">— блок —</option>' + bloks.map(b => `<option value="${b}">${b}</option>`).join('');
-  document.getElementById('pprObjSel').innerHTML = '<option value="">— объект —</option>';
+  blokSel.innerHTML = '<option value="">Блок</option>' + bloks.map(b => `<option value="${b}">${b}</option>`).join('');
+  document.getElementById('pprObjSel').innerHTML = '<option value="">Объект</option>';
+  document.getElementById('pprSearch').value = '';
   _pprRenderList([]);
   _pprUpdateBottom();
 }
@@ -7850,19 +7891,34 @@ function closePprPicker() {
 function pprFillObjects() {
   const blok = document.getElementById('pprBlokSel').value;
   const objs = blok ? [...new Set(orgPprData.filter(p => p.blok === blok).map(p => p.obj))].sort((a, b) => a.localeCompare(b, 'ru', { numeric: true })) : [];
-  document.getElementById('pprObjSel').innerHTML = '<option value="">— объект —</option>' + objs.map(o => `<option value="${o}">${o}</option>`).join('');
+  document.getElementById('pprObjSel').innerHTML = '<option value="">Объект</option>' + objs.map(o => `<option value="${o}">${o}</option>`).join('');
+  document.getElementById('pprSearch').value = '';
   _pprRenderList([]);
   _pprSelectedNom = null;
   _pprUpdateBottom();
 }
 
 function pprFillNumbers() {
+  document.getElementById('pprSearch').value = '';
   const blok = document.getElementById('pprBlokSel').value;
   const obj  = document.getElementById('pprObjSel').value;
   const items = (blok && obj) ? orgPprData.filter(p => p.blok === blok && p.obj === obj) : [];
   _pprRenderList(items);
   _pprSelectedNom = null;
   _pprUpdateBottom();
+}
+
+function _pprCurrentItems() {
+  const blok = document.getElementById('pprBlokSel').value;
+  const obj  = document.getElementById('pprObjSel').value;
+  return (blok && obj) ? orgPprData.filter(p => p.blok === blok && p.obj === obj) : [];
+}
+
+function pprFilterList(query) {
+  const q = (query || '').trim().toLowerCase();
+  const items = _pprCurrentItems();
+  const filtered = q ? items.filter(p => (p.nom + ' ' + (p.hdr||'')).toLowerCase().includes(q)) : items;
+  _pprRenderList(filtered);
 }
 
 function _pprFavKey() { return 'ppr_fav_' + (currentUser?.org || 'default'); }
@@ -7873,10 +7929,7 @@ function pprToggleFav(btn, nom) {
   const favs = _pprFavLoad();
   if (favs.has(nom)) { favs.delete(nom); } else { favs.add(nom); }
   _pprFavSave(favs);
-  const blok = document.getElementById('pprBlokSel').value;
-  const obj  = document.getElementById('pprObjSel').value;
-  const items = (blok && obj) ? orgPprData.filter(p => p.blok === blok && p.obj === obj) : [];
-  _pprRenderList(items);
+  pprFilterList(document.getElementById('pprSearch').value);
   if (_pprSelectedNom) {
     const el = document.querySelector(`#pprNomList .ppr-nom-item[data-nom="${CSS.escape(_pprSelectedNom)}"]`);
     if (el) pprSelectItem(el);
@@ -8767,7 +8820,8 @@ function copyDevEmail() {
           </div>
         </div>
       </div>
-      <div style="padding:0 20px 16px;display:flex;justify-content:flex-end">
+      <div style="padding:0 20px 16px;display:flex;justify-content:space-between;gap:8px">
+        <button onclick="downloadTemplateFile(this)" style="background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:7px 16px;cursor:pointer;font-size:13px;font-weight:600">Скачать шаблон</button>
         <button onclick="_hidePersonnelLoadingModal()" style="background:var(--accent);color:white;border:none;border-radius:6px;padding:7px 20px;cursor:pointer;font-size:13px;font-weight:600">Понятно</button>
       </div>
     </div>
@@ -8801,7 +8855,8 @@ function copyDevEmail() {
         </div>
       </div>
     </div>
-    <div style="padding:0 20px 16px;display:flex;justify-content:flex-end">
+    <div style="padding:0 20px 16px;display:flex;justify-content:space-between;gap:8px">
+      <button onclick="downloadTemplateFile(this)" style="background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:7px 16px;cursor:pointer;font-size:13px;font-weight:600">Скачать шаблон</button>
       <button onclick="closeNoEmployeeDataModal()" style="background:var(--accent);color:white;border:none;border-radius:6px;padding:7px 20px;cursor:pointer;font-size:13px;font-weight:600">Понятно</button>
     </div>
   </div>
@@ -8815,12 +8870,13 @@ function copyDevEmail() {
       <button onclick="closePprPicker()" style="background:rgba(255,255,255,.15);border:none;color:white;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1">✕</button>
     </div>
     <div style="padding:10px 14px;display:flex;gap:6px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg-page)">
-      <select id="pprBlokSel" onchange="pprFillObjects()" style="flex:1;border:none;border-radius:8px;padding:6px 10px;font-size:12px;background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer">
-        <option value="">— блок —</option>
+      <select id="pprBlokSel" onchange="pprFillObjects()" style="flex:0 0 110px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface);color:var(--text);cursor:pointer">
+        <option value="">Блок</option>
       </select>
-      <select id="pprObjSel" onchange="pprFillNumbers()" style="flex:1;border:none;border-radius:8px;padding:6px 10px;font-size:12px;background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer">
-        <option value="">— объект —</option>
+      <select id="pprObjSel" onchange="pprFillNumbers()" style="flex:0 0 110px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface);color:var(--text);cursor:pointer">
+        <option value="">Объект</option>
       </select>
+      <input id="pprSearch" type="text" placeholder="Поиск…" oninput="pprFilterList(this.value)" style="flex:1;min-width:0;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface);color:var(--text)">
     </div>
     <div id="pprNomList" style="overflow-y:auto;flex:1;padding:8px 6px;background:var(--surface)">
       <div style="padding:24px 16px;text-align:center;color:var(--gray-400);font-size:13px">Выберите блок и объект</div>
