@@ -1572,7 +1572,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.32</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.33</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -4388,7 +4388,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.32';
+const CURRENT_VERSION = 'v3.33';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5139,6 +5139,7 @@ function switchTab(id) {
   renderTabs();
   clearFormUI(true);
   loadFormData();
+  applyUserToForm();
   checkButtons();
   if (syncEnabled) syncAllRows();
 }
@@ -5171,6 +5172,7 @@ function closeTab(e, id) {
     renderTabs();
     clearFormUI(true);
     loadFormData();
+    applyUserToForm();
     checkButtons();
     if (syncEnabled) syncAllRows();
   } else {
@@ -5198,6 +5200,10 @@ function clearCurrentTab() {
 }
 
 function clearFormUI(withRows) {
+  // Снимаем auth-lock чтобы не оставалось рассинхрона между span и input
+  ['fieldOrg','fieldRukovFio','fieldRukovDolzh'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.classList.remove('auth-locked');
+  });
   ['org','nomer','dateStart','nomerOgn','ppr','naradVydalDolzh','naradVydalFio',
    'naradVydal','rukovDolzh','rukovFio','utvPprv','mesto','vidRabot'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
@@ -5848,6 +5854,12 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.33', date: '06.07.2026',
+    changes: [
+      'Исправлен критический баг: в скачанном документе теперь всегда указываются данные текущего пользователя, а не сохранённые данные из предыдущей сессии',
+    ]
+  },
   {
     version: 'v3.32', date: '06.07.2026',
     changes: [
