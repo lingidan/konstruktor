@@ -1630,7 +1630,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.35</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.36</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1827,7 +1827,7 @@
           <div style="display:flex;gap:6px;align-items:stretch">
             <input type="text" id="ppr" placeholder="" style="flex:1;min-width:0">
             <button type="button" id="pprPickBtn" onclick="openPprPicker()" title="Выбрать ППР из реестра"
-              style="display:none;flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;align-items:center;gap:5px;transition:background .15s,color .15s"
+              style="flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:background .15s,color .15s"
               onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--accent-light)';this.style.color='var(--accent)'">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
               Из реестра
@@ -3922,22 +3922,37 @@ function updateExecCount() {
 
 // ─── Drag-and-Drop для строк таблицы исполнителей ─────────────────────────
 let _dndSrc = null;
+let _dndEnabled = false;
 
+// Включаем draggable только когда зажат именно хэндл
 document.addEventListener('mousedown', e => {
-  const handle = e.target.closest('.td-drag');
-  if (!handle) return;
+  const handle = e.target.closest('.drag-handle, .td-drag');
+  if (!handle) { _dndEnabled = false; return; }
   const tr = handle.closest('tr');
-  if (!tr) return;
+  if (!tr || !tr.closest('#execBody')) { _dndEnabled = false; return; }
+  _dndEnabled = true;
   tr.setAttribute('draggable', 'true');
-  e.preventDefault();
+});
+
+document.addEventListener('mouseup', () => {
+  if (!_dndEnabled) return;
+  _dndEnabled = false;
+  // Сбрасываем draggable если drag так и не начался
+  if (!_dndSrc) {
+    document.querySelectorAll('#execBody tr[draggable="true"]').forEach(tr => {
+      tr.setAttribute('draggable', 'false');
+    });
+  }
 });
 
 document.addEventListener('dragstart', e => {
+  if (!_dndEnabled) { e.preventDefault(); return; }
   const tr = e.target.closest('tr');
-  if (!tr || !tr.closest('#execBody')) return;
+  if (!tr || !tr.closest('#execBody')) { e.preventDefault(); return; }
   _dndSrc = tr;
   tr.classList.add('dnd-dragging');
   e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', '');
 });
 
 document.addEventListener('dragover', e => {
@@ -3945,6 +3960,7 @@ document.addEventListener('dragover', e => {
   const tr = e.target.closest('tr');
   if (!tr || tr === _dndSrc || !tr.closest('#execBody')) return;
   e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
   document.querySelectorAll('#execBody tr.dnd-over').forEach(r => r.classList.remove('dnd-over'));
   tr.classList.add('dnd-over');
 });
@@ -3967,12 +3983,14 @@ document.addEventListener('drop', e => {
   scheduleSave();
 });
 
-document.addEventListener('dragend', e => {
-  if (!_dndSrc) return;
-  _dndSrc.classList.remove('dnd-dragging');
-  _dndSrc.setAttribute('draggable', 'false');
+document.addEventListener('dragend', () => {
+  if (_dndSrc) {
+    _dndSrc.classList.remove('dnd-dragging');
+    _dndSrc.setAttribute('draggable', 'false');
+    _dndSrc = null;
+  }
+  _dndEnabled = false;
   document.querySelectorAll('#execBody tr.dnd-over').forEach(r => r.classList.remove('dnd-over'));
-  _dndSrc = null;
 });
 
 // ─── Форматирование даты в формат «дд» месяц гггг г. ──────────────────────
@@ -4547,7 +4565,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.35';
+const CURRENT_VERSION = 'v3.36';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -6008,6 +6026,13 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.36', date: '06.07.2026',
+    changes: [
+      'Исправлен Drag-and-Drop строк: перетаскивание теперь срабатывает при зажатии иконки ⠿',
+      'Кнопка «Из реестра» у поля ППР теперь видна всегда; при отсутствии данных показывает подсказку',
+    ]
+  },
   {
     version: 'v3.35', date: '06.07.2026',
     changes: [
@@ -7565,7 +7590,12 @@ function _rlpLoadRooms() {
 
 // ─── ППР-пикер ────────────────────────────────────────────────────────────
 function openPprPicker() {
-  if (!orgPprData.length) return;
+  if (!currentUser) { openLoginModal(); return; }
+  if (_personnelStatus !== 'ready') { _openPickerWhenReady(() => openPprPicker()); return; }
+  if (!orgPprData.length) {
+    alert('Реестр ППР не заполнен. Добавьте колонки «ППР - блок», «ППР - объект», «ППР - номер» в таблицу организации.');
+    return;
+  }
   document.getElementById('pprPickerOverlay').style.display = 'block';
   document.body.style.overflow = 'hidden';
   const bloks = [...new Set(orgPprData.map(p => p.blok))].sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
