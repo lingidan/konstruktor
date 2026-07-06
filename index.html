@@ -4682,11 +4682,15 @@ function downloadBlob(blob, filename) {
   trackDocGenerated();
   const hint = document.getElementById('dlShareHint');
   if (hint) hint.classList.add('visible');
+  _refreshPersonnelCache();
 }
 
 function trackDocGenerated() {
   const login = (currentUser && currentUser.login) ? currentUser.login : 'anonymous';
-  _apiCall({ action: 'trackDocs', login }).catch(() => {});
+  const token = _authToken();
+  _apiCall({ action: 'trackDocs', login, token }).catch((e) => {
+    console.warn('[trackDocs] ошибка фиксации скачивания:', e);
+  });
 }
 
 async function downloadNaryad(btn) {
