@@ -249,7 +249,12 @@
     .grid-2, .grid-3 { grid-template-columns: 1fr; }
     .col-span-2, .col-span-3 { grid-column: span 1; }
     .cb-grid { grid-template-columns: 1fr 1fr; }
+    .cb-item { min-width: 0; }
+    .cb-label { word-break: break-word; }
     .dl-grid { flex-direction: column; }
+  }
+  @media (max-width: 420px) {
+    .cb-grid { grid-template-columns: 1fr; }
   }
 
   /* ── Кнопка Настройки ── */
@@ -1639,7 +1644,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.38</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.40</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -4575,7 +4580,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.38';
+const CURRENT_VERSION = 'v3.40';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -4677,7 +4682,6 @@ function downloadBlob(blob, filename) {
   trackDocGenerated();
   const hint = document.getElementById('dlShareHint');
   if (hint) hint.classList.add('visible');
-  _refreshPersonnelCache();
 }
 
 function trackDocGenerated() {
@@ -6036,6 +6040,20 @@ async function buildOgnevoyDocument(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.40', date: '06.07.2026',
+    changes: [
+      'Исправлен баг: после каждого скачивания возникала скрытая ошибка из-за удалённой функции — счётчик теперь работает корректно',
+    ]
+  },
+  {
+    version: 'v3.39', date: '06.07.2026',
+    changes: [
+      'Избранное ★ в пикере помещений и пикере ППР — избранные закреплены вверху списка',
+      'Мобильный баг: факторы блока 2 больше не выходят за границу экрана',
+      'Фильтр-дропдауны в пикере ППР без рамок — чище и аккуратнее',
+    ]
+  },
   {
     version: 'v3.38', date: '06.07.2026',
     changes: [
@@ -7662,6 +7680,24 @@ function pprFillNumbers() {
   _pprUpdateBottom();
 }
 
+function _pprFavKey() { return 'ppr_fav_' + (currentUser?.org || 'default'); }
+function _pprFavLoad() { try { return new Set(JSON.parse(localStorage.getItem(_pprFavKey()) || '[]')); } catch(e) { return new Set(); } }
+function _pprFavSave(set) { try { localStorage.setItem(_pprFavKey(), JSON.stringify([...set])); } catch(e) {} }
+function pprToggleFav(btn, nom) {
+  event.preventDefault(); event.stopPropagation();
+  const favs = _pprFavLoad();
+  if (favs.has(nom)) { favs.delete(nom); } else { favs.add(nom); }
+  _pprFavSave(favs);
+  const blok = document.getElementById('pprBlokSel').value;
+  const obj  = document.getElementById('pprObjSel').value;
+  const items = (blok && obj) ? orgPprData.filter(p => p.blok === blok && p.obj === obj) : [];
+  _pprRenderList(items);
+  if (_pprSelectedNom) {
+    const el = document.querySelector(`#pprNomList .ppr-nom-item[data-nom="${CSS.escape(_pprSelectedNom)}"]`);
+    if (el) pprSelectItem(el);
+  }
+}
+
 function _pprRenderList(items) {
   const list = document.getElementById('pprNomList');
   if (!document.getElementById('pprBlokSel').value || !document.getElementById('pprObjSel').value) {
@@ -7672,13 +7708,28 @@ function _pprRenderList(items) {
     list.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--gray-400);font-size:13px">Нет записей</div>';
     return;
   }
-  list.innerHTML = items.map(p => `
+  const favs = _pprFavLoad();
+  const favItems  = items.filter(p => favs.has(p.nom));
+  const restItems = items.filter(p => !favs.has(p.nom));
+  const makeItem = (p, isFav) => `
     <div class="ppr-nom-item" data-nom="${_esc(p.nom)}" data-hdr="${_esc(p.hdr||'')}"
          onclick="pprSelectItem(this)"
-         style="padding:9px 12px;cursor:pointer;border-radius:6px;margin:2px 0;display:flex;flex-direction:column;gap:2px;transition:background .12s">
-      <span style="font-size:13px;font-weight:600;color:var(--text)">${_esc(p.nom)}</span>
-      ${p.hdr ? `<span style="font-size:11px;color:var(--gray-400)">${_esc(p.hdr)}</span>` : ''}
-    </div>`).join('');
+         style="padding:9px 12px;cursor:pointer;border-radius:6px;margin:2px 0;display:flex;align-items:flex-start;gap:6px;transition:background .12s">
+      <div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0">
+        <span style="font-size:13px;font-weight:600;color:var(--text)">${_esc(p.nom)}</span>
+        ${p.hdr ? `<span style="font-size:11px;color:var(--gray-400)">${_esc(p.hdr)}</span>` : ''}
+      </div>
+      <button type="button" onclick="pprToggleFav(this,'${_esc(p.nom)}')" title="${isFav?'Убрать из избранного':'Добавить в избранное'}"
+        style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;flex-shrink:0;color:${isFav?'#f5a623':'var(--gray-400)'};margin-top:1px">${isFav?'★':'☆'}</button>
+    </div>`;
+  let html = '';
+  if (favItems.length) {
+    html += `<div style="padding:4px 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em">Избранные</div>`;
+    html += favItems.map(p => makeItem(p, true)).join('');
+    if (restItems.length) html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:4px">Все записи</div>`;
+  }
+  html += restItems.map(p => makeItem(p, false)).join('');
+  list.innerHTML = html;
 }
 
 function pprSelectItem(el) {
@@ -7743,6 +7794,17 @@ function closeRoomListPopup() {
   document.body.style.overflow = '';
 }
 
+function _rlpFavKey() { return 'rlp_fav_' + (currentUser?.org || 'default'); }
+function _rlpFavLoad() { try { return new Set(JSON.parse(localStorage.getItem(_rlpFavKey()) || '[]')); } catch(e) { return new Set(); } }
+function _rlpFavSave(set) { try { localStorage.setItem(_rlpFavKey(), JSON.stringify([...set])); } catch(e) {} }
+function rlpToggleFav(btn, room) {
+  event.preventDefault(); event.stopPropagation();
+  const favs = _rlpFavLoad();
+  if (favs.has(room)) { favs.delete(room); } else { favs.add(room); }
+  _rlpFavSave(favs);
+  rlpUpdate();
+}
+
 function rlpUpdate() {
   const bld = document.getElementById('rlpBuilding').value;
   const floor = document.getElementById('rlpFloor').value;
@@ -7752,16 +7814,30 @@ function rlpUpdate() {
   const list = document.getElementById('rlpList');
   if (!rooms.length) {
     list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--gray-400);font-size:12px">Ничего не найдено</div>';
-  } else {
-    list.innerHTML = rooms.map(r => {
-      const key = floor + '||' + r;
-      const sel = _rlpSelected.has(key);
-      return `<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:12px;${sel?'background:var(--accent-light);color:var(--accent);font-weight:600':''}">
-        <input type="checkbox" value="${key}" ${sel?'checked':''} onchange="rlpToggle(this)" style="accent-color:var(--accent)">
-        ${r}
-      </label>`;
-    }).join('');
+    rlpSyncCount(); return;
   }
+  const favs = _rlpFavLoad();
+  const favRooms = rooms.filter(r => favs.has(r));
+  const restRooms = rooms.filter(r => !favs.has(r));
+  const makeItem = (r, isFav) => {
+    const key = floor + '||' + r;
+    const sel = _rlpSelected.has(key);
+    const re = r.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    return `<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:12px;${sel?'background:var(--accent-light);color:var(--accent);font-weight:600':''}">
+      <input type="checkbox" value="${key}" ${sel?'checked':''} onchange="rlpToggle(this)" style="accent-color:var(--accent);flex-shrink:0">
+      <span style="flex:1">${re}</span>
+      <button type="button" onclick="rlpToggleFav(this,'${re}')" title="${isFav?'Убрать из избранного':'Добавить в избранное'}"
+        style="background:none;border:none;cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;flex-shrink:0;color:${isFav?'#f5a623':'var(--gray-400)'}">${isFav?'★':'☆'}</button>
+    </label>`;
+  };
+  let html = '';
+  if (favRooms.length && !q) {
+    html += `<div style="padding:4px 8px 2px;font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em">Избранные</div>`;
+    html += favRooms.map(r => makeItem(r, true)).join('');
+    if (restRooms.length) html += `<div style="padding:6px 8px 2px;font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:4px">Все помещения</div>`;
+  }
+  html += restRooms.map(r => makeItem(r, false)).join('');
+  list.innerHTML = html;
   rlpSyncCount();
 }
 
@@ -8541,11 +8617,11 @@ function copyDevEmail() {
       <span style="font-weight:700;font-size:14px">Выбор ППР из реестра</span>
       <button onclick="closePprPicker()" style="background:rgba(255,255,255,.15);border:none;color:white;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1">✕</button>
     </div>
-    <div style="padding:10px 14px;display:flex;gap:8px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg-page)">
-      <select id="pprBlokSel" onchange="pprFillObjects()" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface);color:var(--text)">
+    <div style="padding:10px 14px;display:flex;gap:6px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg-page)">
+      <select id="pprBlokSel" onchange="pprFillObjects()" style="flex:1;border:none;border-radius:8px;padding:6px 10px;font-size:12px;background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer">
         <option value="">— блок —</option>
       </select>
-      <select id="pprObjSel" onchange="pprFillNumbers()" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--surface);color:var(--text)">
+      <select id="pprObjSel" onchange="pprFillNumbers()" style="flex:1;border:none;border-radius:8px;padding:6px 10px;font-size:12px;background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer">
         <option value="">— объект —</option>
       </select>
     </div>
