@@ -1656,7 +1656,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.50</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.51</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1786,7 +1786,7 @@
           <input type="date" id="dateStart" oninput="setEndDate(); checkButtons()">
         </div>
 
-        <div class="field col-span-2">
+        <div class="field col-span-2" id="nomerOgnField">
           <label>Номер огневого наряда <span style="font-weight:400; color:var(--gray-400, #94a3b8); font-size:12px">(только для огневых работ)</span></label>
           <input type="text" id="nomerOgn" placeholder="">
         </div>
@@ -2957,6 +2957,12 @@ function _showAdminBtn() {
     typeSwitch.style.display = isAdmin ? 'flex' : 'none';
     if (!isAdmin) switchNaryadType('general');
   }
+  // У админа огневой наряд формируется на отдельной вкладке «Огневой» —
+  // старая кнопка/поле на общестроительном листе для него больше не нужны.
+  const ognField = document.getElementById('nomerOgnField');
+  const ognBtn = document.getElementById('btnOgnev');
+  if (ognField) ognField.style.display = isAdmin ? 'none' : '';
+  if (ognBtn) ognBtn.style.display = isAdmin ? 'none' : '';
 }
 
 async function _refreshAdminBadge() {
@@ -4989,7 +4995,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.50';
+const CURRENT_VERSION = 'v3.51';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -6955,6 +6961,12 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.51', date: '07.07.2026',
+    changes: [
+      'Огневой наряд для админа теперь формируется только на отдельной вкладке «Огневой» — старая кнопка на общестроительном листе для него скрыта',
+    ]
+  },
   {
     version: 'v3.50', date: '07.07.2026',
     changes: [
