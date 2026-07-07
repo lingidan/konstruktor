@@ -1694,7 +1694,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.59</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.62</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2217,6 +2217,16 @@
       </button>
 
       <div class="grid grid-2">
+
+        <div class="field col-span-2">
+          <label>Вид наряда <span class="req">*</span></label>
+          <div style="display:flex;gap:8px;">
+            <button type="button" id="ognevoyKindOgnevoy" onclick="setOgnevoyKind('ognevoy')"
+              style="flex:1;justify-content:center;display:flex;align-items:center;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--navy);">Огневой наряд</button>
+            <button type="button" id="ognevoyKindPozh" onclick="setOgnevoyKind('pozh')"
+              style="flex:1;justify-content:center;display:flex;align-items:center;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--navy);">Пожароопасный наряд</button>
+          </div>
+        </div>
 
         <div class="field col-span-2" id="fieldOgnevoyOrg">
           <label>Организация</label>
@@ -3053,17 +3063,26 @@ function _showAdminBtn() {
   const isAdmin = currentUser && (currentUser.login || '').toLowerCase() === 'лингидан';
   wrap.style.display = isAdmin ? 'flex' : 'none';
   if (isAdmin) _refreshAdminBadge();
+
+  // Вкладка «Огневой» доступна всем авторизованным пользователям, ОЗП — только админу
   const typeSwitch = document.getElementById('naryadTypeSwitch');
+  const showSwitch = !!currentUser;
   if (typeSwitch) {
-    typeSwitch.style.display = isAdmin ? 'flex' : 'none';
-    if (!isAdmin) switchNaryadType('general');
+    typeSwitch.style.display = showSwitch ? 'flex' : 'none';
+    if (!showSwitch) switchNaryadType('general');
   }
-  // У админа огневой наряд формируется на отдельной вкладке «Огневой» —
+  const bo = document.getElementById('btnTypeOzp');
+  if (bo) {
+    bo.style.display = isAdmin ? '' : 'none';
+    if (!isAdmin && _naryadType === 'ozp') switchNaryadType('general');
+  }
+
+  // Огневой наряд формируется на отдельной вкладке «Огневой» —
   // старая кнопка/поле на общестроительном листе для него больше не нужны.
   const ognField = document.getElementById('nomerOgnField');
   const ognBtn = document.getElementById('btnOgnev');
-  if (ognField) ognField.style.display = isAdmin ? 'none' : '';
-  if (ognBtn) ognBtn.style.display = isAdmin ? 'none' : '';
+  if (ognField) ognField.style.display = showSwitch ? 'none' : '';
+  if (ognBtn) ognBtn.style.display = showSwitch ? 'none' : '';
 }
 
 async function _refreshAdminBadge() {
@@ -5388,7 +5407,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.59';
+const CURRENT_VERSION = 'v3.62';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -6326,6 +6345,7 @@ function _collectOgnevoySnapshot() {
     utvFio: g('ognevoyUtvFio'), utvDolzh: g('ognevoyUtvDolzh'), nomer: g('ognevoyNomer'),
     dateStart: g('ognevoyDateStart'), rukovFio: g('ognevoyRukovFio'), rukovDolzh: g('ognevoyRukovDolzh'),
     mesto: g('ognevoyMesto'), soderzhanie: g('ognevoySoderzhanie'),
+    kind: _ognevoyKind,
     executors,
   };
 }
@@ -6347,11 +6367,13 @@ function _applyOgnevoySnapshot(snap) {
   const tbody = document.getElementById('ognevoyExecBody');
   if (tbody) { tbody.innerHTML = ''; _ognevoyRowCount = 0; }
   _syncOgnevoyReadonlyFields();
-  if (!snap) { checkOgnevoyButtons(); return; }
+  if (!snap) { _ognevoyKind = 'ognevoy'; updateOgnevoyKindBtns(); checkOgnevoyButtons(); return; }
   set('ognevoyOrg', snap.org);
   set('ognevoyUtvFio', snap.utvFio); set('ognevoyUtvDolzh', snap.utvDolzh); set('ognevoyNomer', snap.nomer);
   set('ognevoyDateStart', snap.dateStart); set('ognevoyRukovFio', snap.rukovFio); set('ognevoyRukovDolzh', snap.rukovDolzh);
   set('ognevoyMesto', snap.mesto); set('ognevoySoderzhanie', snap.soderzhanie);
+  _ognevoyKind = snap.kind === 'pozh' ? 'pozh' : 'ognevoy';
+  updateOgnevoyKindBtns();
   (snap.executors || []).forEach(e => addOgnevoyRow(e.fio, e.dolzh, e.razr, e.grEB));
   checkOgnevoyButtons();
 }
@@ -6529,7 +6551,10 @@ function loadFormData() {
   }
 
   checkButtons();
-  switchNaryadType(snap.naryadType === 'ozp' || snap.naryadType === 'ognevoy' ? snap.naryadType : 'general');
+  const isAdminUser = currentUser && (currentUser.login || '').toLowerCase() === 'лингидан';
+  const wantType = snap.naryadType === 'ozp' ? (isAdminUser ? 'ozp' : 'general')
+    : snap.naryadType === 'ognevoy' ? 'ognevoy' : 'general';
+  switchNaryadType(wantType);
   _applyOzpSnapshot(snap.ozp);
   _applyOgnevoySnapshot(snap.ognevoySheet);
 }
@@ -6815,7 +6840,10 @@ async function buildOgnevoyDocument(data) {
     ],
   });
 
-  const p6 = 'а) Обеспечить место производства работ не менее чем 2 огнетушителями с минимальным рангом модельного очага пожара 2А,55В и покрывалом для изоляции очага возгорания; б) для исключения попадания раскаленных частиц металла в смежные с помещения, соседние этажи и другие помещения, все смотровые технологические, и другие люки (лючки), вентиляционные, монтажные и другие проемы (отверстия) в перекрытиях, стенах и перегородках помещений, где проводятся огневые работы, закрыть негорючими материалами; г) место проведения огневых работ очистить от горючих веществ и материалов в радиусе согласно приложению № 5 п. 356 ППР РФ; д) находящиеся в радиусе зоны очистки территории строительные конструкции, настилы полов, отделка и облицовка, а также изоляция и части оборудования, выполненные из горючих материалов, должны быть защищены от попадания на них искр металлическим экраном, асбестовым полотном или другими негорючими материалами и при необходимости политы водой; д) работы проводить в спецодежде не поддерживающей горение, использовать электросварочное оборудование заводского типа; е) схемы подключения электрооборудования и требования к их содержанию выполнить в соответствии с ПУЭ; ж) по окончании огневых работ контроль за местом проведения работ в течение 2 часов; з) при перерывах в работе, а также в конце рабочей смены сварочную аппаратуру необходимо отключать (в том числе от электросети).';
+  const isPozh = data.kind === 'pozh';
+  const p6 = isPozh
+    ? 'а) место проведения работ очистить от горючих веществ и материалов в радиусе, достаточном для исключения их воспламенения, либо изолировать несгораемым экраном; б) обеспечить место проведения работ первичными средствами пожаротушения (не менее 2 огнетушителей, войлок/кошма для изоляции очага возгорания); в) перед началом и периодически в процессе работ контролировать воздух рабочей зоны на отсутствие взрывопожароопасной концентрации паров и газов, при необходимости обеспечить принудительную вентиляцию; г) при работе с легковоспламеняющимися и горючими жидкостями использовать только закрытую тару, исключить проливы, обеспечить защиту от статического электричества (заземление оборудования и тары); д) применять искробезопасный инструмент и оборудование во взрыво- и пожароопасных зонах; е) исключить курение и использование открытого огня в месте проведения работ и в радиусе опасной зоны; ж) обеспечить свободные пути эвакуации и доступ к месту работ для пожарных подразделений; з) по окончании работ произвести осмотр места проведения работ, обеспечить наблюдение за ним в течение не менее 3 часов после завершения.'
+    : 'а) Обеспечить место производства работ не менее чем 2 огнетушителями с минимальным рангом модельного очага пожара 2А,55В и покрывалом для изоляции очага возгорания; б) для исключения попадания раскаленных частиц металла в смежные с помещения, соседние этажи и другие помещения, все смотровые технологические, и другие люки (лючки), вентиляционные, монтажные и другие проемы (отверстия) в перекрытиях, стенах и перегородках помещений, где проводятся огневые работы, закрыть негорючими материалами; г) место проведения огневых работ очистить от горючих веществ и материалов в радиусе согласно приложению № 5 п. 356 ППР РФ; д) находящиеся в радиусе зоны очистки территории строительные конструкции, настилы полов, отделка и облицовка, а также изоляция и части оборудования, выполненные из горючих материалов, должны быть защищены от попадания на них искр металлическим экраном, асбестовым полотном или другими негорючими материалами и при необходимости политы водой; д) работы проводить в спецодежде не поддерживающей горение, использовать электросварочное оборудование заводского типа; е) схемы подключения электрооборудования и требования к их содержанию выполнить в соответствии с ПУЭ; ж) по окончании огневых работ контроль за местом проведения работ в течение 2 часов; з) при перерывах в работе, а также в конце рабочей смены сварочную аппаратуру необходимо отключать (в том числе от электросети).';
 
   const doc = new Document({
     styles: {
@@ -6845,11 +6873,12 @@ async function buildOgnevoyDocument(data) {
             run([naradVydalDolzh, naradVydalShortFio].filter(Boolean).join('  ') || '____________________'),
           ],
         }),
+        p('', { align: AlignmentType.RIGHT, spacing: { after: 0, line: 200, lineRule: 'auto' }, borderBottom: true }),
         p(dateStr, { align: AlignmentType.RIGHT }),
         hint('ф.и.о., подпись', { align: AlignmentType.RIGHT }),
 
         // Заголовок
-        p(`НАРЯД-ДОПУСК на выполнение огневых работ № ${nomerOgn}`, { bold: true, size: 24, align: AlignmentType.CENTER, spacing: { before: 120, after: 40, line: 200, lineRule: 'auto' } }),
+        p(`НАРЯД-ДОПУСК на выполнение ${isPozh ? 'пожароопасных' : 'огневых'} работ № ${nomerOgn}`, { bold: true, size: 24, align: AlignmentType.CENTER, spacing: { before: 120, after: 40, line: 200, lineRule: 'auto' } }),
 
         // П.1
         sectionTitle('1', 'Выдан (кому)'),
@@ -7016,7 +7045,7 @@ function switchNaryadType(type) {
     btn.style.color = type === t ? '#fff' : 'var(--navy)';
   });
   if (type === 'ozp') { _renderOzpFactorsAndSiz(); _syncOzpAutoFields(); _renderOzpFilesList(); checkOzpButtons(); }
-  if (type === 'ognevoy') { _syncOgnevoyReadonlyFields(); }
+  if (type === 'ognevoy') { _syncOgnevoyReadonlyFields(); updateOgnevoyKindBtns(); }
 }
 
 // Организация и ФИО/должность руководителя — жёстко из профиля авторизованного
@@ -7209,6 +7238,19 @@ async function buildOzpDocument(data) {
 }
 
 // ─── Конструктор огневого наряда (отдельный лист) ─────────────────────────────
+let _ognevoyKind = 'ognevoy'; // 'ognevoy' | 'pozh'
+function setOgnevoyKind(kind) {
+  _ognevoyKind = kind;
+  updateOgnevoyKindBtns();
+  scheduleSave();
+}
+function updateOgnevoyKindBtns() {
+  const a = document.getElementById('ognevoyKindOgnevoy');
+  const b = document.getElementById('ognevoyKindPozh');
+  if (a) { a.style.background = _ognevoyKind === 'ognevoy' ? 'var(--navy)' : 'var(--surface)'; a.style.color = _ognevoyKind === 'ognevoy' ? '#fff' : 'var(--navy)'; }
+  if (b) { b.style.background = _ognevoyKind === 'pozh' ? 'var(--navy)' : 'var(--surface)'; b.style.color = _ognevoyKind === 'pozh' ? '#fff' : 'var(--navy)'; }
+}
+
 let _ognevoyRowCount = 0;
 
 function addOgnevoyRow(fio = '', dolzh = '', razr = '', grEB = '') {
@@ -7392,6 +7434,7 @@ function collectOgnevoySheetData() {
     nomer: g('ognevoyNomer'), dateStart: g('ognevoyDateStart'),
     rukovFio: g('ognevoyRukovFio'), rukovDolzh: g('ognevoyRukovDolzh'),
     mesto: g('ognevoyMesto'), soderzhanie: g('ognevoySoderzhanie'),
+    kind: _ognevoyKind,
     executors,
   };
 }
@@ -7415,9 +7458,11 @@ async function downloadOgnevoySheet(btn) {
       naradVydalDolzh: data.utvDolzh,
       naradVydalFio: data.utvFio,
       executors: data.executors,
+      kind: data.kind,
     };
     const blob = await buildOgnevoyDocument(docData);
-    downloadBlob(blob, `Огневой наряд №${data.nomer || '_'}_О.docx`);
+    const suffix = data.kind === 'pozh' ? '_П' : '_О';
+    downloadBlob(blob, `Огневой наряд №${data.nomer || '_'}${suffix}.docx`);
   } catch (e) {
     console.error(e);
     alert('Ошибка при формировании документа: ' + e.message);
@@ -7510,6 +7555,26 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.62', date: '12.07.2026',
+    changes: [
+      'Вкладка «Огневой» теперь доступна всем авторизованным пользователям, а не только администратору',
+      'Вкладка «ОЗП» по-прежнему видна только администратору',
+    ]
+  },
+  {
+    version: 'v3.61', date: '12.07.2026',
+    changes: [
+      'На листе «Огневой» добавлен выбор вида наряда: «Огневой» или «Пожароопасный» — со своим перечнем мер пожарной безопасности и заголовком в документе',
+      'Имя файла при скачивании отражает выбранный вид наряда (суффикс «_О» или «_П»)',
+    ]
+  },
+  {
+    version: 'v3.60', date: '12.07.2026',
+    changes: [
+      'В шапке «УТВЕРЖДАЮ» Огневого наряда добавлена отдельная строка для подписи под ФИО утвердившего',
+    ]
+  },
   {
     version: 'v3.59', date: '12.07.2026',
     changes: [
