@@ -1694,7 +1694,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.58</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.59</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1891,7 +1891,7 @@
         </div>
 
         <div class="field col-span-2">
-          <label>ППР (проект производства работ)</label>
+          <label>ППР <span style="font-weight:400; color:var(--gray-400, #94a3b8); font-size:12px">(проект производства работ)</span></label>
           <div style="display:flex;gap:6px;align-items:flex-start">
             <input type="text" id="ppr" placeholder="" style="flex:1;min-width:0">
             <button class="issuer-pick-btn" type="button" id="pprPickBtn" onclick="openPprPicker()" title="Выбрать ППР из реестра">
@@ -5388,7 +5388,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.58';
+const CURRENT_VERSION = 'v3.59';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -7402,8 +7402,22 @@ async function downloadOgnevoySheet(btn) {
   btn.innerHTML = '⏳ Формирование документа...';
   btn.disabled = true;
   try {
-    const blob = await buildOgnevoySheetDoc(data);
-    downloadBlob(blob, `Огневой наряд №${data.nomer || '_'}.docx`);
+    // Используем тот же генератор полного бланка НД, что и на общестроительном листе —
+    // сокращённая docx-версия (buildOgnevoySheetDoc) не подходит по формату
+    const docData = {
+      org: data.org,
+      nomerOgn: data.nomer,
+      dateStart: data.dateStart,
+      vidRabot: data.soderzhanie,
+      mesto: data.mesto,
+      rukov: [data.rukovDolzh, data.rukovFio].filter(Boolean).join(' '),
+      naradVydal: [data.utvDolzh, data.utvFio].filter(Boolean).join(' '),
+      naradVydalDolzh: data.utvDolzh,
+      naradVydalFio: data.utvFio,
+      executors: data.executors,
+    };
+    const blob = await buildOgnevoyDocument(docData);
+    downloadBlob(blob, `Огневой наряд №${data.nomer || '_'}_О.docx`);
   } catch (e) {
     console.error(e);
     alert('Ошибка при формировании документа: ' + e.message);
@@ -7496,6 +7510,13 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.59', date: '12.07.2026',
+    changes: [
+      'Скачивание наряда с листа «Огневой» теперь формирует полный типовой бланк НД (13 пунктов, как на общестроительном), а не упрощённый текстовый вариант',
+      'К имени скачиваемого файла Огневого наряда добавлен суффикс «_О»',
+    ]
+  },
   {
     version: 'v3.58', date: '07.07.2026',
     changes: [
