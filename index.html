@@ -830,13 +830,13 @@
   .issuer-ac-dolzh { font-size: 11.5px; color: var(--gray-400); }
 
   /* Модальный пикер */
-  #issuerPickerOverlay, #rukovPickerOverlay {
+  #issuerPickerOverlay, #rukovPickerOverlay, #pprvPickerOverlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,.4); z-index: 800;
     justify-content: center; align-items: flex-start; padding-top: 60px;
   }
-  #issuerPickerOverlay.open, #rukovPickerOverlay.open { display: flex; }
-  #issuerPickerModal, #rukovPickerModal {
+  #issuerPickerOverlay.open, #rukovPickerOverlay.open, #pprvPickerOverlay.open { display: flex; }
+  #issuerPickerModal, #rukovPickerModal, #pprvPickerModal {
     background: var(--surface); width: 420px; max-width: calc(100vw - 24px);
     border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,.22);
     display: flex; flex-direction: column; max-height: calc(100vh - 100px);
@@ -1189,7 +1189,8 @@
     #crewPickerOverlay > div,
     #issuerPickerOverlay > div,
     #rukovPickerOverlay > div,
-    #pprPickerOverlay > div { width: 96vw !important; max-width: 96vw !important; }
+    #pprPickerOverlay > div,
+    #pprvPickerOverlay > div { width: 96vw !important; max-width: 96vw !important; }
 
     /* Версия в шапке */
     #versionBadge { display: none; }
@@ -1351,6 +1352,17 @@
       </select>
     </div>
     <div class="ipm-list" id="rukovPickerList"></div>
+  </div>
+</div>
+
+<!-- Пикер утвердившего ППРв -->
+<div id="pprvPickerOverlay" onclick="pprvPickerOverlayClick(event)">
+  <div id="pprvPickerModal">
+    <div class="ipm-header">
+      <h3>Выбор утвердившего ППРв</h3>
+      <button class="ipm-close" onclick="closePprvPicker()">×</button>
+    </div>
+    <div class="ipm-list" id="pprvPickerList"></div>
   </div>
 </div>
 
@@ -1644,7 +1656,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.48</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.49</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1860,7 +1872,13 @@
 
         <div class="field col-span-2">
           <label>Утвердил ППРв <span style="font-weight:400; color:var(--gray-400, #94a3b8); font-size:12px">(план производства работ на высоте)</span></label>
-          <input type="text" id="utvPprv" placeholder="Иванов Иван Иванович, главный инженер">
+          <div style="display:flex;gap:6px;align-items:stretch">
+            <input type="text" id="utvPprv" placeholder="Иванов Иван Иванович, главный инженер" style="flex:1;min-width:0">
+            <button class="issuer-pick-btn" type="button" onclick="openPprvPicker()" title="Выбрать из списка">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Из списка
+            </button>
+          </div>
         </div>
 
         <div class="field col-span-2" style="display:flex; flex-direction:row; gap:60px; align-items:flex-start; flex-wrap:wrap">
@@ -2545,6 +2563,7 @@ let employeeMap = {};
 let issuersList = [];      // [{fio, dolzh, ppu}] — те, кто может выдавать наряд
 let allEmployeesList = []; // [{fio, dolzh, razr, grEB, grVys, ppu}] — все сотрудники
 let receiversList = [];    // [{fio, dolzh, ppu}] — те, за кого Оператор может оформлять наряд ("Получает" в столбце H)
+let pprvApproversList = []; // [{fio, dolzh}] — те, кто утверждает ППРв ("ппрв" в столбце H)
 let orgPprData = [];       // [{blok, obj, nom, hdr}] — реестр ППР
 let _pprSelectedNom = null; // текущий выбранный номер ППР в пикере
 
@@ -3257,6 +3276,7 @@ function logout() {
   employeeMap = {};
   issuersList = [];
   allEmployeesList = [];
+  pprvApproversList = [];
   _personnelStatus = 'idle';
   _personnelPendingOpeners.length = 0;
   rebuildIssuerPpuFilter();
@@ -3662,6 +3682,79 @@ function selectIssuer(fio, dolzh) {
   closeIssuerAc();
 }
 
+// ─── Пикер утвердившего ППРв ──────────────────────────────────────────────
+
+function pprvFavKey() {
+  return 'pprv_favs_' + (currentUser ? currentUser.org : '_');
+}
+function pprvFavs() {
+  try { return JSON.parse(localStorage.getItem(pprvFavKey()) || '[]'); } catch { return []; }
+}
+function pprvFavToggle(fio) {
+  let favs = pprvFavs();
+  const idx = favs.indexOf(fio);
+  if (idx >= 0) favs.splice(idx, 1); else favs.push(fio);
+  localStorage.setItem(pprvFavKey(), JSON.stringify(favs));
+}
+
+function openPprvPicker() {
+  if (!currentUser) { openLoginModal(); return; }
+  if (_personnelStatus !== 'ready') { _openPickerWhenReady(() => openPprvPicker()); return; }
+  if (!pprvApproversList.length) { openNoEmployeeDataModal(); return; }
+  renderPprvList();
+  document.getElementById('pprvPickerOverlay').classList.add('open');
+}
+function closePprvPicker() {
+  document.getElementById('pprvPickerOverlay').classList.remove('open');
+}
+function pprvPickerOverlayClick(e) {
+  if (e.target === document.getElementById('pprvPickerOverlay')) closePprvPicker();
+}
+
+function renderPprvList() {
+  const list = document.getElementById('pprvPickerList');
+  const favs = pprvFavs();
+
+  const favItems   = pprvApproversList.filter(p => favs.includes(p.fio));
+  const otherItems = pprvApproversList.filter(p => !favs.includes(p.fio));
+
+  let html = '';
+  if (favItems.length) {
+    html += `<div class="ipm-section-label">⭐ Избранные</div>`;
+    favItems.forEach(p => { html += pprvItemHtml(p, true); });
+  }
+  if (otherItems.length) {
+    if (favItems.length) html += `<div class="ipm-section-label">Все</div>`;
+    otherItems.forEach(p => { html += pprvItemHtml(p, false); });
+  }
+  if (!pprvApproversList.length) html = `<div class="ipm-empty">Нет сотрудников с правом утверждения ППРв</div>`;
+  list.innerHTML = html;
+}
+
+function pprvItemHtml(p, isFav) {
+  const fioE   = p.fio.replace(/"/g, '&quot;');
+  const dolzhE = (p.dolzh || '').replace(/"/g, '&quot;');
+  return `<div class="ipm-item" onclick="selectPprv('${fioE}','${dolzhE}')">
+    <button class="ipm-star ${isFav ? 'on' : ''}" title="Избранное"
+      onclick="event.stopPropagation();togglePprvFav('${fioE}',this)">★</button>
+    <div class="ipm-info">
+      <div class="ipm-fio">${p.fio}</div>
+      ${p.dolzh ? `<div class="ipm-dolzh">${p.dolzh}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function togglePprvFav(fio) {
+  pprvFavToggle(fio);
+  renderPprvList();
+}
+
+function selectPprv(fio, dolzh) {
+  document.getElementById('utvPprv').value = (dolzh ? dolzh + ' ' : '') + fio;
+  document.getElementById('utvPprv').dispatchEvent(new Event('input'));
+  closePprvPicker();
+}
+
 // ── Автодополнение ────────────────────────────────────────────────────────
 let _acIdx = -1;
 
@@ -3875,6 +3968,7 @@ function _resetOrgPersonnelData() {
   issuersList = [];
   allEmployeesList = [];
   receiversList = [];
+  pprvApproversList = [];
   orgDangers = [];
   orgStaticData = { p3: null, p4rows: [], p5rows: [] };
   orgRooms = {};
@@ -3911,6 +4005,7 @@ function loadOrgPersonnel() {
       issuersList = [];
       allEmployeesList = [];
       receiversList = [];
+      pprvApproversList = [];
       // У Операторов свой маркер выдающего наряд в столбце H — "Выдает" (а не
       // "да", которым отмечаются выдающие для обычных аккаунтов). В ячейке
       // может быть указано сразу несколько маркеров через запятую или пробел
@@ -3935,6 +4030,8 @@ function loadOrgPersonnel() {
         // "Получает" среди токенов той же колонки — сотрудник может быть выбран
         // Оператором как руководитель работ (см. rukovPicker / receiversList).
         if (canIssueTokens.includes('получает')) receiversList.push({ fio, dolzh, ppu });
+        // "ппрв" среди токенов той же колонки — сотрудник может утверждать ППРв.
+        if (canIssueTokens.includes('ппрв')) pprvApproversList.push({ fio, dolzh });
       }
       orgDangers = [];
       if (iDName >= 0) {
@@ -4032,6 +4129,7 @@ function loadOrgPersonnel() {
       issuersList.sort((a, b) => a.fio.localeCompare(b.fio, 'ru'));
       allEmployeesList.sort((a, b) => a.fio.localeCompare(b.fio, 'ru'));
       receiversList.sort((a, b) => a.fio.localeCompare(b.fio, 'ru'));
+      pprvApproversList.sort((a, b) => a.fio.localeCompare(b.fio, 'ru'));
       rebuildIssuerPpuFilter();
       rebuildCrewPpuFilter();
       rebuildRukovPpuFilter();
@@ -4893,7 +4991,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.48';
+const CURRENT_VERSION = 'v3.49';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -6859,6 +6957,12 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.49', date: '07.07.2026',
+    changes: [
+      'Добавлен пикер «Из списка» для поля «Утвердил ППРв» — выбор сотрудника из реестра организации',
+    ]
+  },
   {
     version: 'v3.48', date: '07.07.2026',
     changes: [
