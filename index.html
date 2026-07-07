@@ -1694,7 +1694,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.55</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.57</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2274,12 +2274,25 @@
         </div>
 
         <div class="field col-span-2">
-          <label>Место проведения работ (по координатам) <span class="req">*</span> <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(из общестроительного листа)</span></label>
-          <input type="text" id="ognevoyMesto" readonly style="background:var(--gray-100,#f1f5f9);cursor:not-allowed;" oninput="checkOgnevoyButtons()">
+          <label>Вид работ <span class="req">*</span></label>
+          <div style="display:flex;gap:6px;align-items:flex-start">
+            <textarea id="ognevoySoderzhanie" rows="1" placeholder="" oninput="checkOgnevoyButtons()" style="flex:1;min-width:0;min-height:36px;resize:vertical;font-family:inherit;font-size:14px;padding:9px 12px;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius);color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(46,122,191,.18)'" onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
+            <button class="issuer-pick-btn" type="button" onclick="openWorkTypePicker('ognevoySoderzhanie')" title="Выбрать вид работ из списка">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Из списка
+            </button>
+          </div>
         </div>
+
         <div class="field col-span-2">
-          <label>Содержание работ <span class="req">*</span> <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(из общестроительного листа)</span></label>
-          <input type="text" id="ognevoySoderzhanie" readonly style="background:var(--gray-100,#f1f5f9);cursor:not-allowed;" oninput="checkOgnevoyButtons()">
+          <label>Место выполнения работ <span class="req">*</span></label>
+          <div style="display:flex;gap:6px;align-items:flex-start">
+            <textarea id="ognevoyMesto" rows="1" placeholder="" oninput="checkOgnevoyButtons()" style="flex:1;min-width:0;min-height:36px;resize:vertical;font-family:inherit;font-size:14px;padding:9px 12px;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius);color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(46,122,191,.18)'" onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
+            <button class="issuer-pick-btn" type="button" onclick="openRoomPicker('ognevoyMesto')" title="Выбрать помещения на плане">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              Помещения
+            </button>
+          </div>
         </div>
 
       </div>
@@ -2299,8 +2312,10 @@
             <tr>
               <th style="width:28px"></th>
               <th>№</th>
-              <th style="min-width:200px">ФИО</th>
-              <th style="min-width:200px">Профессия / группа</th>
+              <th style="min-width:170px">ФИО</th>
+              <th style="min-width:160px">Должность</th>
+              <th style="min-width:65px">Разряд</th>
+              <th style="min-width:75px">Группа ЭБ</th>
               <th style="width:36px"></th>
             </tr>
           </thead>
@@ -2403,6 +2418,13 @@ function fillTestData() {
     cells[2].textContent = String(rnd(2, 6));
     cells[3].textContent = String(rnd(1, 5));
   }
+
+  // Кнопка перезаписывает org/rukovFio/rukovDolzh случайными данными выше —
+  // applyUserToForm() возвращает на место реальные данные авторизованного
+  // пользователя (org/ФИО/должность), если он вошёл в систему. Это уже
+  // случалось как баг раньше (тестовые данные подменяли профиль юзера) —
+  // не убирать этот вызов и не переносить рандомизацию org/rukov* после него.
+  applyUserToForm();
 
   checkButtons();
 }
@@ -3640,11 +3662,12 @@ function execAcSelect(e, fio, dolzh, razr, grEB, grVys) {
   const tr    = _execAcCell.closest('tr');
   const cells = tr.querySelectorAll('.cell-edit');
   _execAcCell.textContent = fio;
-  cells[1].textContent = dolzh;
-  cells[2].textContent = razr;
-  cells[3].textContent = grEB;
-  cells[4].textContent = grVys;
+  if (cells[1]) cells[1].textContent = dolzh;
+  if (cells[2]) cells[2].textContent = razr;
+  if (cells[3]) cells[3].textContent = grEB;
+  if (cells[4]) cells[4].textContent = grVys;
   execAcHide();
+  if (tr.closest('#ognevoyExecBody')) checkOgnevoyButtons();
   scheduleSave();
 }
 
@@ -4696,15 +4719,17 @@ function updateExecCount() {
 }
 
 // ─── Drag-and-Drop для строк таблицы исполнителей ─────────────────────────
+// Работает как для общестроительного (#execBody), так и для Огневого (#ognevoyExecBody)
 let _dndSrc = null;
 let _dndEnabled = false;
+const _DND_BODIES = '#execBody, #ognevoyExecBody';
 
 // Включаем draggable только когда зажат именно хэндл
 document.addEventListener('mousedown', e => {
   const handle = e.target.closest('.drag-handle, .td-drag');
   if (!handle) { _dndEnabled = false; return; }
   const tr = handle.closest('tr');
-  if (!tr || !tr.closest('#execBody')) { _dndEnabled = false; return; }
+  if (!tr || !tr.closest(_DND_BODIES)) { _dndEnabled = false; return; }
   _dndEnabled = true;
   tr.setAttribute('draggable', 'true');
 });
@@ -4714,7 +4739,7 @@ document.addEventListener('mouseup', () => {
   _dndEnabled = false;
   // Сбрасываем draggable если drag так и не начался
   if (!_dndSrc) {
-    document.querySelectorAll('#execBody tr[draggable="true"]').forEach(tr => {
+    document.querySelectorAll('#execBody tr[draggable="true"], #ognevoyExecBody tr[draggable="true"]').forEach(tr => {
       tr.setAttribute('draggable', 'false');
     });
   }
@@ -4723,7 +4748,7 @@ document.addEventListener('mouseup', () => {
 document.addEventListener('dragstart', e => {
   if (!_dndEnabled) { e.preventDefault(); return; }
   const tr = e.target.closest('tr');
-  if (!tr || !tr.closest('#execBody')) { e.preventDefault(); return; }
+  if (!tr || !tr.closest(_DND_BODIES)) { e.preventDefault(); return; }
   _dndSrc = tr;
   tr.classList.add('dnd-dragging');
   e.dataTransfer.effectAllowed = 'move';
@@ -4733,19 +4758,19 @@ document.addEventListener('dragstart', e => {
 document.addEventListener('dragover', e => {
   if (!_dndSrc) return;
   const tr = e.target.closest('tr');
-  if (!tr || tr === _dndSrc || !tr.closest('#execBody')) return;
+  if (!tr || tr === _dndSrc || !tr.closest(_DND_BODIES) || tr.closest(_DND_BODIES) !== _dndSrc.closest(_DND_BODIES)) return;
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
-  document.querySelectorAll('#execBody tr.dnd-over').forEach(r => r.classList.remove('dnd-over'));
+  document.querySelectorAll('#execBody tr.dnd-over, #ognevoyExecBody tr.dnd-over').forEach(r => r.classList.remove('dnd-over'));
   tr.classList.add('dnd-over');
 });
 
 document.addEventListener('drop', e => {
   if (!_dndSrc) return;
   const tr = e.target.closest('tr');
-  if (!tr || tr === _dndSrc || !tr.closest('#execBody')) return;
+  if (!tr || tr === _dndSrc || !tr.closest(_DND_BODIES) || tr.closest(_DND_BODIES) !== _dndSrc.closest(_DND_BODIES)) return;
   e.preventDefault();
-  const tbody = document.getElementById('execBody');
+  const tbody = _dndSrc.closest(_DND_BODIES);
   const rows = Array.from(tbody.querySelectorAll('tr'));
   const srcIdx = rows.indexOf(_dndSrc);
   const tgtIdx = rows.indexOf(tr);
@@ -4754,7 +4779,8 @@ document.addEventListener('drop', e => {
   } else {
     tbody.insertBefore(_dndSrc, tr);
   }
-  renumberRows();
+  if (tbody.id === 'ognevoyExecBody') { renumberOgnevoyRows(); checkOgnevoyButtons(); }
+  else { renumberRows(); }
   scheduleSave();
 });
 
@@ -4765,7 +4791,7 @@ document.addEventListener('dragend', () => {
     _dndSrc = null;
   }
   _dndEnabled = false;
-  document.querySelectorAll('#execBody tr.dnd-over').forEach(r => r.classList.remove('dnd-over'));
+  document.querySelectorAll('#execBody tr.dnd-over, #ognevoyExecBody tr.dnd-over').forEach(r => r.classList.remove('dnd-over'));
 });
 
 // ─── Форматирование даты в формат «дд» месяц гггг г. ──────────────────────
@@ -5340,7 +5366,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.55';
+const CURRENT_VERSION = 'v3.57';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -6268,20 +6294,29 @@ function _collectOgnevoySnapshot() {
   const executors = [];
   document.querySelectorAll('#ognevoyExecBody tr').forEach(tr => {
     const c = tr.querySelectorAll('.cell-edit');
-    executors.push({ fio: c[0]?.textContent.trim() || '', prof: c[1]?.textContent.trim() || '' });
+    executors.push({
+      fio: c[0]?.textContent.trim() || '', dolzh: c[1]?.textContent.trim() || '',
+      razr: c[2]?.textContent.trim() || '', grEB: c[3]?.textContent.trim() || '',
+    });
   });
   return {
     org: g('ognevoyOrg'),
     utvFio: g('ognevoyUtvFio'), utvDolzh: g('ognevoyUtvDolzh'), nomer: g('ognevoyNomer'),
     dateStart: g('ognevoyDateStart'), rukovFio: g('ognevoyRukovFio'), rukovDolzh: g('ognevoyRukovDolzh'),
+    mesto: g('ognevoyMesto'), soderzhanie: g('ognevoySoderzhanie'),
     executors,
   };
 }
 
+// Заполняет место/содержание работ из общестроительного листа только если поля ещё пустые
+// (поля Огневого редактируемые, не перетирать то, что уже ввёл пользователь)
 function _syncOgnevoyReadonlyFields() {
-  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-  setVal('ognevoyMesto', document.getElementById('mesto')?.value.trim());
-  setVal('ognevoySoderzhanie', document.getElementById('vidRabot')?.value.trim());
+  const setIfEmpty = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && !el.value.trim()) el.value = val || '';
+  };
+  setIfEmpty('ognevoyMesto', document.getElementById('mesto')?.value.trim());
+  setIfEmpty('ognevoySoderzhanie', document.getElementById('vidRabot')?.value.trim());
   checkOgnevoyButtons();
 }
 
@@ -6294,7 +6329,8 @@ function _applyOgnevoySnapshot(snap) {
   set('ognevoyOrg', snap.org);
   set('ognevoyUtvFio', snap.utvFio); set('ognevoyUtvDolzh', snap.utvDolzh); set('ognevoyNomer', snap.nomer);
   set('ognevoyDateStart', snap.dateStart); set('ognevoyRukovFio', snap.rukovFio); set('ognevoyRukovDolzh', snap.rukovDolzh);
-  (snap.executors || []).forEach(e => addOgnevoyRow(e.fio, e.prof));
+  set('ognevoyMesto', snap.mesto); set('ognevoySoderzhanie', snap.soderzhanie);
+  (snap.executors || []).forEach(e => addOgnevoyRow(e.fio, e.dolzh, e.razr, e.grEB));
   checkOgnevoyButtons();
 }
 
@@ -7153,20 +7189,23 @@ async function buildOzpDocument(data) {
 // ─── Конструктор огневого наряда (отдельный лист) ─────────────────────────────
 let _ognevoyRowCount = 0;
 
-function addOgnevoyRow(fio = '', prof = '') {
+function addOgnevoyRow(fio = '', dolzh = '', razr = '', grEB = '') {
   _ognevoyRowCount++;
   const tbody = document.getElementById('ognevoyExecBody');
   const tr = document.createElement('tr');
   const id = _ognevoyRowCount;
   tr.dataset.id = id;
+  const esc = s => (s || '').replace(/</g, '&lt;');
 
   tr.innerHTML = `
     <td class="td-drag" draggable="false" title="Перетащить строку">
       <span class="drag-handle">⠿</span>
     </td>
     <td class="td-num">${id}</td>
-    <td class="cell-edit" contenteditable="true" tabindex="0" data-placeholder="Иванов Иван Иванович">${fio.replace(/</g, '&lt;')}</td>
-    <td class="cell-edit" contenteditable="true" tabindex="0" data-placeholder="Электрогазосварщик">${prof.replace(/</g, '&lt;')}</td>
+    <td class="cell-edit" contenteditable="true" tabindex="0" data-col="0" data-placeholder="Иванов Иван Иванович">${esc(fio)}</td>
+    <td class="cell-edit" contenteditable="true" tabindex="0" data-col="1" data-placeholder="Электрогазосварщик">${esc(dolzh)}</td>
+    <td class="cell-edit" contenteditable="true" tabindex="0" data-col="2" data-placeholder="5">${esc(razr)}</td>
+    <td class="cell-edit" contenteditable="true" tabindex="0" data-col="3" data-placeholder="2">${esc(grEB)}</td>
     <td>
       <button class="btn-del-row" onclick="delOgnevoyRow(this)" title="Удалить строку">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24">
@@ -7178,7 +7217,67 @@ function addOgnevoyRow(fio = '', prof = '') {
   tbody.appendChild(tr);
   tr.querySelectorAll('.cell-edit').forEach(td => {
     td.addEventListener('input', () => { checkOgnevoyButtons(); scheduleSave(); });
+    td.addEventListener('paste', e => handleOgnevoyCellPaste(e, td));
+    td.addEventListener('keydown', e => handleOgnevoyCellKeydown(e, td));
   });
+
+  const fioTd = tr.querySelector('[data-col="0"]');
+  fioTd.addEventListener('input',   () => execAcShow(fioTd));
+  fioTd.addEventListener('keydown', e  => execAcKeyDown(e, fioTd));
+  fioTd.addEventListener('blur',    ()  => { setTimeout(execAcHide, 150); });
+  fioTd.addEventListener('blur', () => {
+    if (!syncEnabled) return;
+    const f = fioTd.textContent.trim();
+    if (!f) return;
+    const emp = lookupEmployee(f);
+    if (!emp) return;
+    const cells = tr.querySelectorAll('.cell-edit');
+    cells[1].textContent = emp.dolzh;
+    cells[2].textContent = emp.razr;
+    cells[3].textContent = emp.grEB;
+    checkOgnevoyButtons();
+    scheduleSave();
+  });
+}
+
+// Вставка из буфера для таблицы исполнителей Огневого (аналог handleCellPaste)
+function handleOgnevoyCellPaste(e, td) {
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text');
+  if (!text) return;
+  const gridRows = text.replace(/\r/g, '').split('\n');
+  while (gridRows.length && gridRows[gridRows.length - 1] === '') gridRows.pop();
+  if (!gridRows.length) return;
+
+  const startCol = parseInt(td.dataset.col, 10);
+  let tr = td.closest('tr');
+  gridRows.forEach((rowText, ri) => {
+    if (ri > 0) {
+      let nextTr = tr.nextElementSibling;
+      if (!nextTr) { addOgnevoyRow(); nextTr = tr.nextElementSibling; }
+      tr = nextTr;
+    }
+    const vals = rowText.split('\t');
+    const cells = tr.querySelectorAll('.cell-edit');
+    vals.forEach((v, ci) => {
+      const cell = cells[startCol + ci];
+      if (cell) cell.textContent = v.trim();
+    });
+  });
+  renumberOgnevoyRows();
+  checkOgnevoyButtons();
+  scheduleSave();
+}
+
+function handleOgnevoyCellKeydown(e, td) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const tr = td.closest('tr');
+  const next = tr.nextElementSibling;
+  if (!next) return;
+  const col = parseInt(td.dataset.col, 10);
+  const cells = next.querySelectorAll('.cell-edit');
+  if (cells[col]) cells[col].focus();
 }
 
 function delOgnevoyRow(btn) {
@@ -7210,8 +7309,7 @@ function pullOgnevoyFromGeneral() {
   document.querySelectorAll('#execBody tr').forEach(tr => {
     const c = tr.querySelectorAll('.cell-edit');
     const fio = c[0]?.textContent.trim();
-    const prof = c[1]?.textContent.trim();
-    if (fio) addOgnevoyRow(fio, prof);
+    if (fio) addOgnevoyRow(fio, c[1]?.textContent.trim(), c[2]?.textContent.trim(), c[3]?.textContent.trim());
   });
   checkOgnevoyButtons();
 }
@@ -7232,8 +7330,15 @@ function collectOgnevoySheetData() {
   document.querySelectorAll('#ognevoyExecBody tr').forEach(tr => {
     const c = tr.querySelectorAll('.cell-edit');
     const fio = c[0]?.textContent.trim();
-    const prof = c[1]?.textContent.trim();
-    if (fio) executors.push({ fio, prof });
+    if (!fio) return;
+    const dolzhV = c[1]?.textContent.trim() || '';
+    const razrV  = c[2]?.textContent.trim() || '';
+    const grEBV  = c[3]?.textContent.trim() || '';
+    const parts = [];
+    if (dolzhV) parts.push(dolzhV);
+    if (razrV)  parts.push(razrV + ' р.');
+    if (grEBV)  parts.push(toRoman(grEBV) + ' гр.');
+    executors.push({ fio, dolzh: dolzhV, razr: razrV, grEB: grEBV, prof: parts.join(', ') });
   });
   return {
     org: g('ognevoyOrg'),
@@ -7345,6 +7450,20 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.57', date: '07.07.2026',
+    changes: [
+      'Исправлен баг: кнопка «Тест — заполнить случайными данными» подменяла организацию и ФИО руководителя работ авторизованного пользователя случайными тестовыми данными',
+    ]
+  },
+  {
+    version: 'v3.56', date: '07.07.2026',
+    changes: [
+      'Лист «Огневой»: поля «Вид работ» и «Место выполнения работ» теперь редактируемые, с пикером из списка/плана — как на общестроительном',
+      'Состав исполнителей на листе «Огневой» переоформлен по образцу общестроительного (должность, разряд, группа ЭБ, автодополнение по базе, перетаскивание строк)',
+      'Исправлена кнопка скачивания Огневого наряда, которая оставалась неактивной из-за незаполненных полей общестроительного листа',
+    ]
+  },
   {
     version: 'v3.55', date: '07.07.2026',
     changes: [
@@ -9182,8 +9301,10 @@ function rpApplyZoom() {
   if (label) label.textContent = Math.round(_rpScale * 100) + '%';
 }
 
-function openRoomPicker() {
+let _roomPickerTargetField = 'mesto';
+function openRoomPicker(targetField) {
   if (!currentUser) { openLoginModal(); return; }
+  _roomPickerTargetField = targetField || 'mesto';
   openRoomListPopup();
 }
 
@@ -9448,7 +9569,7 @@ function saveRoomListPopup() {
   const text = [...byFloor.entries()]
     .map(([floor, rooms]) => floor + ': ' + rooms.join(', '))
     .join('\n');
-  const el = document.getElementById('mesto');
+  const el = document.getElementById(_roomPickerTargetField || 'mesto');
   if (el) { el.value = text; el.dispatchEvent(new Event('input')); }
   closeRoomListPopup();
 }
@@ -9460,7 +9581,7 @@ let _wtpTab = 'vidRabot'; // 'vidRabot' | 'primenenie'
 
 // Разбираем текущее значение поля vidRabot обратно в два набора
 function _wtpParseField() {
-  const raw = (document.getElementById('vidRabot')?.value || '').trim();
+  const raw = (document.getElementById(_wtpTargetField || 'vidRabot')?.value || '').trim();
   const SEP = ' с применением ';
   const sepIdx = raw.toLowerCase().indexOf(SEP.toLowerCase());
   let vidPart = raw, appPart = '';
@@ -9495,8 +9616,10 @@ function _wtpCurrentSet() {
   return _wtpTab === 'primenenie' ? _wtpAppSelected : _wtpSelected;
 }
 
-function openWorkTypePicker() {
+let _wtpTargetField = 'vidRabot';
+function openWorkTypePicker(targetField) {
   if (!currentUser) { openLoginModal(); return; }
+  _wtpTargetField = targetField || 'vidRabot';
   _wtpParseField();
   document.getElementById('workTypePopup').style.display = 'block';
   document.body.style.overflow = 'hidden';
@@ -9608,7 +9731,7 @@ function wtpUpdateFooter() {
 }
 
 function wtpApply() {
-  const el = document.getElementById('vidRabot');
+  const el = document.getElementById(_wtpTargetField || 'vidRabot');
   if (el) { el.value = _wtpBuildValue(); el.dispatchEvent(new Event('input')); }
   closeWorkTypePicker();
 }
@@ -9631,7 +9754,7 @@ function closeRoomPicker() {
 function saveRoomPicker() {
   const text = rpFormatText();
   if (!text) return;
-  const el = document.getElementById('mesto');
+  const el = document.getElementById(_roomPickerTargetField || 'mesto');
   if (el) { el.value = text; el.dispatchEvent(new Event('input')); }
   closeRoomPicker();
 }
