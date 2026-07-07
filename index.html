@@ -1694,7 +1694,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.66</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.67</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2155,7 +2155,18 @@
       <label style="font-size:12px;font-weight:600;color:var(--gray-700);letter-spacing:.2px;text-transform:uppercase;">
         Состав бригады <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px;text-transform:none;">(из общестроительного листа)</span>
       </label>
-      <div id="ozpBrigadaList" style="margin:8px 0 20px;font-size:14px;color:var(--text);"></div>
+      <div class="table-wrap" style="margin:8px 0 20px;">
+        <table>
+          <thead>
+            <tr>
+              <th>№</th>
+              <th style="min-width:170px">ФИО</th>
+              <th style="min-width:160px">Должность</th>
+            </tr>
+          </thead>
+          <tbody id="ozpBrigadaList"></tbody>
+        </table>
+      </div>
 
       <div class="grid grid-2">
         <div class="field col-span-2">
@@ -5407,7 +5418,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.66';
+const CURRENT_VERSION = 'v3.67';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -7087,8 +7098,8 @@ function _syncOzpAutoFields() {
   const list = document.getElementById('ozpBrigadaList');
   if (list) {
     list.innerHTML = brigada.length
-      ? brigada.map(b => `<div style="padding:4px 0;border-bottom:1px solid var(--gray-200);">${b.fio}${b.itog ? ' — ' + b.itog : ''}</div>`).join('')
-      : '<div style="color:var(--gray-400);">Бригада пуста — заполните состав исполнителей на общестроительном листе</div>';
+      ? brigada.map((b, i) => `<tr><td>${i + 1}</td><td>${b.fio}</td><td>${b.itog || ''}</td></tr>`).join('')
+      : '<tr><td colspan="3" style="color:var(--gray-400);">Бригада пуста — заполните состав исполнителей на общестроительном листе</td></tr>';
   }
 
   ['ozpNabludPick', 'ozpSpasPick'].forEach(selId => {
@@ -7112,12 +7123,20 @@ function _pickOzpRole(role, fio) {
 
 function checkOzpButtons() {
   const g = id => document.getElementById(id)?.value.trim() || '';
+  const nabludFio = g('ozpNabludFio');
+  const spasFio = g('ozpSpasFio');
+  const rolesClash = nabludFio && spasFio && nabludFio.toLowerCase() === spasFio.toLowerCase();
   const ready = g('ozpDateStart') && g('ozpRukovFio') && g('ozpIspolnFio') &&
-                g('ozpNabludFio') && g('ozpSpasFio') && g('ozpMesto') && g('ozpSoderzhanie');
+                nabludFio && spasFio && g('ozpMesto') && g('ozpSoderzhanie') && !rolesClash;
   const btn = document.getElementById('btnOzpDl');
   const placeholder = document.getElementById('ozpDlPlaceholder');
   if (btn) btn.disabled = !ready;
-  if (placeholder) placeholder.style.display = ready ? 'none' : '';
+  if (placeholder) {
+    placeholder.style.display = ready ? 'none' : '';
+    placeholder.innerHTML = rolesClash
+      ? 'Наблюдающий и Спасатель не могут быть одним и тем же человеком'
+      : 'Заполните обязательные поля (отмечены <span style="color:#e05252;font-weight:700;margin:0 4px">*</span>) для появления кнопки скачивания';
+  }
 }
 
 function collectOzpFormData() {
@@ -7132,7 +7151,7 @@ function collectOzpFormData() {
     nabludFio: g('ozpNabludFio'), nabludDolzh: g('ozpNabludDolzh'),
     spasFio: g('ozpSpasFio'), spasDolzh: g('ozpSpasDolzh'),
     mesto: g('ozpMesto'), soderzhanie: g('ozpSoderzhanie'),
-    brigada: _getGeneralBrigadeRows().map(b => b.fio),
+    brigada: _getGeneralBrigadeRows(),
     materialy: g('ozpMaterialy'), svyaz: g('ozpSvyaz'),
     activeFactors, sizRows,
   };
@@ -7200,8 +7219,8 @@ async function buildOzpDocument(data) {
     children.push(new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
-        new TableRow({ children: [cell('Ф.И.О.', { bold: true, width: 60 }), cell('С условиями работ ознакомлен (подпись)', { bold: true, width: 40 })] }),
-        ...data.brigada.map(fio => new TableRow({ children: [cell(fio, { width: 60 }), cell('', { width: 40 })] })),
+        new TableRow({ children: [cell('Ф.И.О.', { bold: true, width: 30 }), cell('Должность', { bold: true, width: 30 }), cell('С условиями работ ознакомлен (подпись)', { bold: true, width: 40 })] }),
+        ...data.brigada.map(b => new TableRow({ children: [cell(b.fio, { width: 30 }), cell(b.itog || '', { width: 30 }), cell('', { width: 40 })] })),
       ],
     }));
   } else {
@@ -7569,6 +7588,14 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.67', date: '07.07.2026',
+    changes: [
+      'Лист ОЗП: состав бригады теперь показан таблицей с должностями, а не простым списком',
+      'В скачиваемом наряде ОЗП должность каждого члена бригады больше не теряется',
+      'Добавлена проверка: Наблюдающий и Спасатель в ОЗП не могут быть одним и тем же человеком',
+    ]
+  },
   {
     version: 'v3.66', date: '07.07.2026',
     changes: [
