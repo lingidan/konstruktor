@@ -82,7 +82,9 @@
   .col-span-3 { grid-column: span 3; }
 
   .field { display: flex; flex-direction: column; gap: 5px; }
-  .field.auth-locked input { display: none; }
+  /* Организация и ФИО/должность руководителя авторизованного пользователя не
+     показываются на форме вообще — эти данные и так известны из профиля. */
+  .field.auth-locked { display: none !important; }
   .auth-value {
     display: none;
     padding: 7px 10px;
@@ -93,7 +95,6 @@
     color: var(--navy, #1a2e45);
     font-weight: 500;
   }
-  .field.auth-locked .auth-value { display: block; }
   .field label { font-size: 12px; font-weight: 600; color: var(--gray-700); letter-spacing: .2px; text-transform: uppercase; }
   .field label .req { color: #e05252; margin-left: 2px; }
   .field .hint  { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
@@ -830,13 +831,13 @@
   .issuer-ac-dolzh { font-size: 11.5px; color: var(--gray-400); }
 
   /* Модальный пикер */
-  #issuerPickerOverlay, #rukovPickerOverlay, #pprvPickerOverlay {
+  #issuerPickerOverlay, #rukovPickerOverlay, #pprvPickerOverlay, #ognevoyUtvPickerOverlay, #ognevoyRukovPickerOverlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,.4); z-index: 800;
     justify-content: center; align-items: flex-start; padding-top: 60px;
   }
-  #issuerPickerOverlay.open, #rukovPickerOverlay.open, #pprvPickerOverlay.open { display: flex; }
-  #issuerPickerModal, #rukovPickerModal, #pprvPickerModal {
+  #issuerPickerOverlay.open, #rukovPickerOverlay.open, #pprvPickerOverlay.open, #ognevoyUtvPickerOverlay.open, #ognevoyRukovPickerOverlay.open { display: flex; }
+  #issuerPickerModal, #rukovPickerModal, #pprvPickerModal, #ognevoyUtvPickerModal, #ognevoyRukovPickerModal {
     background: var(--surface); width: 420px; max-width: calc(100vw - 24px);
     border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,.22);
     display: flex; flex-direction: column; max-height: calc(100vh - 100px);
@@ -1190,7 +1191,9 @@
     #issuerPickerOverlay > div,
     #rukovPickerOverlay > div,
     #pprPickerOverlay > div,
-    #pprvPickerOverlay > div { width: 96vw !important; max-width: 96vw !important; }
+    #pprvPickerOverlay > div,
+    #ognevoyUtvPickerOverlay > div,
+    #ognevoyRukovPickerOverlay > div { width: 96vw !important; max-width: 96vw !important; }
 
     /* Версия в шапке */
     #versionBadge { display: none; }
@@ -1363,6 +1366,40 @@
       <button class="ipm-close" onclick="closePprvPicker()">×</button>
     </div>
     <div class="ipm-list" id="pprvPickerList"></div>
+  </div>
+</div>
+
+<!-- Пикер утвердившего огневой наряд -->
+<div id="ognevoyUtvPickerOverlay" onclick="ognevoyUtvPickerOverlayClick(event)">
+  <div id="ognevoyUtvPickerModal">
+    <div class="ipm-header">
+      <h3>Выбор утвердившего наряд</h3>
+      <button class="ipm-close" onclick="closeOgnevoyUtvPicker()">×</button>
+    </div>
+    <div class="ipm-filter">
+      <span class="ipm-filter-label">Участок</span>
+      <select id="ognevoyUtvPpuFilter" onchange="renderOgnevoyUtvList()">
+        <option value="">Все</option>
+      </select>
+    </div>
+    <div class="ipm-list" id="ognevoyUtvPickerList"></div>
+  </div>
+</div>
+
+<!-- Пикер руководителя работ (Огневой) -->
+<div id="ognevoyRukovPickerOverlay" onclick="ognevoyRukovPickerOverlayClick(event)">
+  <div id="ognevoyRukovPickerModal">
+    <div class="ipm-header">
+      <h3>Выбор руководителя работ</h3>
+      <button class="ipm-close" onclick="closeOgnevoyRukovPicker()">×</button>
+    </div>
+    <div class="ipm-filter">
+      <span class="ipm-filter-label">Участок</span>
+      <select id="ognevoyRukovPpuFilter" onchange="renderOgnevoyRukovList()">
+        <option value="">Все</option>
+      </select>
+    </div>
+    <div class="ipm-list" id="ognevoyRukovPickerList"></div>
   </div>
 </div>
 
@@ -1656,7 +1693,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.51</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.53</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1749,10 +1786,10 @@
 <div id="naryadTypeSwitch" style="display:none;max-width:900px;margin:16px auto 0;padding:0 20px;gap:8px;">
   <button id="btnTypeGeneral" onclick="switchNaryadType('general')"
     style="background:var(--navy);color:#fff;border:none;border-radius:8px 8px 0 0;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;">Общестрой</button>
-  <button id="btnTypeOzp" onclick="switchNaryadType('ozp')"
-    style="background:var(--surface);color:var(--navy);border:2px solid var(--navy);border-bottom:none;border-radius:8px 8px 0 0;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;">ОЗП</button>
   <button id="btnTypeOgnevoy" onclick="switchNaryadType('ognevoy')"
     style="background:var(--surface);color:var(--navy);border:2px solid var(--navy);border-bottom:none;border-radius:8px 8px 0 0;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;">Огневой</button>
+  <button id="btnTypeOzp" onclick="switchNaryadType('ozp')"
+    style="background:var(--surface);color:var(--navy);border:2px solid var(--navy);border-bottom:none;border-radius:8px 8px 0 0;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;">ОЗП</button>
 </div>
 
 <div id="generalContainer" class="container">
@@ -2172,10 +2209,11 @@
 
 <div id="ognevoyContainer" class="container" style="display:none">
 
+  <!-- ═══════════════════════════════════════════════ ОГНЕВОЙ БЛОК 1 -->
   <div class="card">
     <div class="card-header">
-      <span class="block-num">Огневой</span>
-      <h2>Наряд-допуск на выполнение огневых работ</h2>
+      <span class="block-num">Блок 1</span>
+      <h2>Реквизиты и общие сведения (Огневой)</h2>
     </div>
     <div class="card-body">
 
@@ -2185,91 +2223,128 @@
       </button>
 
       <div class="grid grid-2">
-        <div class="field">
-          <label>Кто утвердил (ФИО) <span class="req">*</span></label>
-          <input type="text" id="ognevoyUtvFio" placeholder="" oninput="checkOgnevoyButtons()">
-        </div>
-        <div class="field">
-          <label>Должность утвердившего</label>
-          <input type="text" id="ognevoyUtvDolzh" placeholder="">
+
+        <div class="field col-span-2" id="fieldOgnevoyOrg">
+          <label>Организация</label>
+          <input type="text" id="ognevoyOrg" placeholder="ООО «Название» или АО «Название»">
+          <span class="auth-value" id="ognevoyOrgDisplay"></span>
         </div>
 
         <div class="field">
           <label>Номер наряда</label>
           <input type="text" id="ognevoyNomer" placeholder="">
         </div>
+
         <div class="field">
           <label>Дата выдачи <span class="req">*</span></label>
           <input type="date" id="ognevoyDateStart" oninput="checkOgnevoyButtons()">
         </div>
 
-        <div class="field">
+        <div class="field" id="fieldOgnevoyRukovFio">
           <label>Кому выдан — ФИО руководителя работ <span class="req">*</span></label>
-          <input type="text" id="ognevoyRukovFio" placeholder="" oninput="checkOgnevoyButtons()">
+          <div class="issuer-wrap ognevoy-rukov-wrap">
+            <input type="text" id="ognevoyRukovFio" placeholder="Иванов Иван Иванович" oninput="ognevoyRukovOnInput()" onkeydown="ognevoyRukovKeyDown(event)" autocomplete="off">
+            <div class="issuer-ac-list" id="ognevoyRukovAcList"></div>
+          </div>
+          <span class="auth-value" id="ognevoyRukovFioDisplay"></span>
         </div>
-        <div class="field">
+
+        <div class="field" id="fieldOgnevoyRukovDolzh">
           <label>Должность руководителя</label>
-          <input type="text" id="ognevoyRukovDolzh" placeholder="">
+          <div style="display:flex;gap:6px;align-items:stretch">
+            <input type="text" id="ognevoyRukovDolzh" placeholder="Мастер, прораб, начальник участка" oninput="checkOgnevoyButtons()" style="flex:1;min-width:0">
+            <button class="issuer-pick-btn" type="button" id="ognevoyRukovPickBtn" onclick="openOgnevoyRukovPicker()" title="Выбрать из списка" style="display:none">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Из списка
+            </button>
+          </div>
+          <span class="auth-value" id="ognevoyRukovDolzhDisplay"></span>
+        </div>
+
+        <div class="field">
+          <label>Кто утвердил (ФИО) <span class="req">*</span></label>
+          <div class="issuer-wrap ognevoy-utv-wrap">
+            <input type="text" id="ognevoyUtvFio" placeholder="Иванов Иван Иванович" oninput="ognevoyUtvOnInput()" onkeydown="ognevoyUtvKeyDown(event)" autocomplete="off">
+            <div class="issuer-ac-list" id="ognevoyUtvAcList"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Должность утвердившего</label>
+          <div style="display:flex;gap:6px;align-items:stretch">
+            <input type="text" id="ognevoyUtvDolzh" placeholder="Мастер, прораб, начальник участка" oninput="checkOgnevoyButtons()" style="flex:1;min-width:0">
+            <button class="issuer-pick-btn" type="button" onclick="openOgnevoyUtvPicker()" title="Выбрать из списка">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Из списка
+            </button>
+          </div>
         </div>
 
         <div class="field col-span-2">
-          <label>Место проведения работ (по координатам) <span class="req">*</span></label>
-          <input type="text" id="ognevoyMesto" placeholder="Здание, помещение, отметка" oninput="checkOgnevoyButtons()">
+          <label>Место проведения работ (по координатам) <span class="req">*</span> <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(из общестроительного листа)</span></label>
+          <input type="text" id="ognevoyMesto" readonly style="background:var(--gray-100,#f1f5f9);cursor:not-allowed;" oninput="checkOgnevoyButtons()">
         </div>
         <div class="field col-span-2">
-          <label>Содержание работ <span class="req">*</span></label>
-          <input type="text" id="ognevoySoderzhanie" placeholder="" oninput="checkOgnevoyButtons()">
+          <label>Содержание работ <span class="req">*</span> <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(из общестроительного листа)</span></label>
+          <input type="text" id="ognevoySoderzhanie" readonly style="background:var(--gray-100,#f1f5f9);cursor:not-allowed;" oninput="checkOgnevoyButtons()">
         </div>
 
-        <div class="field">
-          <label>Начало работ — дата</label>
-          <input type="date" id="ognevoyDateNachalo">
-        </div>
-        <div class="field">
-          <label>Начало работ — время</label>
-          <input type="text" id="ognevoyVremyaNachalo" placeholder="08.00">
-        </div>
-        <div class="field">
-          <label>Окончание работ — дата</label>
-          <input type="date" id="ognevoyDateOkonch">
-        </div>
-        <div class="field">
-          <label>Окончание работ — время</label>
-          <input type="text" id="ognevoyVremyaOkonch" placeholder="19.00">
-        </div>
       </div>
-
-      <h3 style="margin:24px 0 8px;font-size:15px;">Состав исполнителей работ</h3>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead>
-          <tr style="text-align:left;color:var(--gray-400);font-size:11px;text-transform:uppercase;">
-            <th style="padding:4px 8px;">Ф.И.О.</th>
-            <th style="padding:4px 8px;">Профессия / группа</th>
-            <th style="width:36px;"></th>
-          </tr>
-        </thead>
-        <tbody id="ognevoyExecBody"></tbody>
-      </table>
-      <button onclick="addOgnevoyRow()" style="margin-top:8px;background:none;border:1.5px dashed var(--gray-200);
-        border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer;color:var(--navy);">+ Добавить строку</button>
-
-      <div style="margin-top:20px;font-size:12px;color:var(--gray-400);line-height:1.5;">
-        Меры по обеспечению пожарной безопасности места проведения работ формируются автоматически по типовому регламенту
-        и не требуют ручного заполнения.
-      </div>
-
     </div>
   </div>
 
-  <div class="dl-section visible" id="ognevoyDlSection">
-    <div class="dl-grid">
-      <button class="btn-dl b-ognev" id="btnOgnevoyDl" onclick="downloadOgnevoySheet(this)" disabled>
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
-        Скачать Огневой наряд
-      </button>
+  <!-- ═══════════════════════════════════════════════ ОГНЕВОЙ БЛОК 2 -->
+  <div class="card">
+    <div class="card-header">
+      <span class="block-num">Блок 2</span>
+      <h2>Состав исполнителей работ</h2>
     </div>
-    <div id="ognevoyDlPlaceholder" style="text-align:center;color:var(--gray-400);font-size:13px;margin-top:8px;">
-      Заполните обязательные поля (отмечены <span style="color:#e05252;font-weight:700;margin:0 4px">*</span>) для появления кнопки скачивания
+    <div class="card-body">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:28px"></th>
+              <th>№</th>
+              <th style="min-width:200px">ФИО</th>
+              <th style="min-width:200px">Профессия / группа</th>
+              <th style="width:36px"></th>
+            </tr>
+          </thead>
+          <tbody id="ognevoyExecBody"></tbody>
+        </table>
+      </div>
+      <button class="btn-add-row" onclick="addOgnevoyRow()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Добавить строку
+      </button>
+
+      <div style="margin-top:20px;font-size:12px;color:var(--gray-400);line-height:1.5;">
+        Меры по обеспечению пожарной безопасности места проведения работ формируются автоматически по типовому регламенту
+        и не требуют ручного заполнения. Время начала и окончания работ вписывается вручную в бумажный бланк по факту.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ ОГНЕВОЙ БЛОК 3 -->
+  <div class="card">
+    <div class="card-header">
+      <span class="block-num">Блок 3</span>
+      <h2>Скачивание</h2>
+    </div>
+    <div class="card-body">
+
+      <div class="dl-section visible" id="ognevoyDlSection">
+        <div class="dl-grid">
+          <button class="btn-dl b-ognev" id="btnOgnevoyDl" onclick="downloadOgnevoySheet(this)" disabled>
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+            Скачать Огневой наряд
+          </button>
+        </div>
+        <div id="ognevoyDlPlaceholder" style="text-align:center;color:var(--gray-400);font-size:13px;margin-top:8px;">
+          Заполните обязательные поля (отмечены <span style="color:#e05252;font-weight:700;margin:0 4px">*</span>) для появления кнопки скачивания
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -2845,6 +2920,9 @@ function applyUserToForm() {
     fieldOrg:      { input: 'org',       display: 'orgDisplay',       value: activeUser ? toGuillemets(activeUser.org) : null },
     fieldRukovFio: { input: 'rukovFio',  display: 'rukovFioDisplay',  value: (activeUser && !isOperator) ? activeUser.fio   : null },
     fieldRukovDolzh:{ input: 'rukovDolzh', display: 'rukovDolzhDisplay', value: (activeUser && !isOperator) ? activeUser.dolzh : null },
+    fieldOgnevoyOrg:      { input: 'ognevoyOrg',      display: 'ognevoyOrgDisplay',      value: activeUser ? toGuillemets(activeUser.org) : null },
+    fieldOgnevoyRukovFio: { input: 'ognevoyRukovFio',  display: 'ognevoyRukovFioDisplay',  value: (activeUser && !isOperator) ? activeUser.fio   : null },
+    fieldOgnevoyRukovDolzh:{ input: 'ognevoyRukovDolzh', display: 'ognevoyRukovDolzhDisplay', value: (activeUser && !isOperator) ? activeUser.dolzh : null },
   };
   for (const [fieldId, cfg] of Object.entries(fields)) {
     const field   = document.getElementById(fieldId);
@@ -2864,16 +2942,12 @@ function applyUserToForm() {
   }
   const rukovBtn = document.getElementById('rukovPickBtn');
   if (rukovBtn) rukovBtn.style.display = isOperator ? 'flex' : 'none';
+  const ognevoyRukovBtn = document.getElementById('ognevoyRukovPickBtn');
+  if (ognevoyRukovBtn) ognevoyRukovBtn.style.display = isOperator ? 'flex' : 'none';
   checkButtons();
+  checkOgnevoyButtons();
 
   // ОЗП: организация/руководитель синхронизируются жёстко из профиля (см. _syncOzpAutoFields).
-  // Огневой лист (пока скрыт) получает руководителя тем же способом, что и раньше.
-  if (activeUser && !isOperator) {
-    const setIfEmpty = (id, val) => { const el = document.getElementById(id); if (el && !el.value && val) el.value = val; };
-    setIfEmpty('ognevoyRukovFio', activeUser.fio);
-    setIfEmpty('ognevoyRukovDolzh', activeUser.dolzh);
-    checkOgnevoyButtons();
-  }
   if (typeof _syncOzpAutoFields === 'function' && _naryadType === 'ozp') _syncOzpAutoFields();
   checkOzpButtons();
 }
@@ -3286,6 +3360,7 @@ function logout() {
   _personnelStatus = 'idle';
   _personnelPendingOpeners.length = 0;
   rebuildIssuerPpuFilter();
+  rebuildIssuerPpuFilter('ognevoyUtvPpuFilter');
   rebuildCrewPpuFilter();
   updateCrewPickerBtn();
   updateAuthButton();
@@ -3309,8 +3384,8 @@ function issuerFavToggle(fio) {
   localStorage.setItem(issuerFavKey(), JSON.stringify(favs));
 }
 
-function rebuildIssuerPpuFilter() {
-  const sel = document.getElementById('issuerPpuFilter');
+function rebuildIssuerPpuFilter(selId = 'issuerPpuFilter') {
+  const sel = document.getElementById(selId);
   if (!sel) return;
   const ppus = [...new Set(issuersList.map(p => p.ppu).filter(Boolean))];
   ppus.sort(_ppuSort);
@@ -3835,8 +3910,8 @@ function rukovFavToggle(fio) {
   localStorage.setItem(rukovFavKey(), JSON.stringify(favs));
 }
 
-function rebuildRukovPpuFilter() {
-  const sel = document.getElementById('rukovPpuFilter');
+function rebuildRukovPpuFilter(selId = 'rukovPpuFilter') {
+  const sel = document.getElementById(selId);
   if (!sel) return;
   const ppus = [...new Set(receiversList.map(p => p.ppu).filter(Boolean))];
   ppus.sort(_ppuSort);
@@ -3966,6 +4041,278 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.rukov-wrap')) closeRukovAc();
 });
 
+// ─── Пикер / автодополнение утвердившего огневой наряд (аналог выдавшего наряд) ──
+
+function ognevoyUtvFavKey() {
+  return 'ognevoy_utv_favs_' + (currentUser ? currentUser.org : '_');
+}
+function ognevoyUtvFavs() {
+  try { return JSON.parse(localStorage.getItem(ognevoyUtvFavKey()) || '[]'); } catch { return []; }
+}
+function ognevoyUtvFavToggle(fio) {
+  let favs = ognevoyUtvFavs();
+  const idx = favs.indexOf(fio);
+  if (idx >= 0) favs.splice(idx, 1); else favs.push(fio);
+  localStorage.setItem(ognevoyUtvFavKey(), JSON.stringify(favs));
+}
+
+function openOgnevoyUtvPicker() {
+  if (!currentUser) { openLoginModal(); return; }
+  if (_personnelStatus !== 'ready') { _openPickerWhenReady(() => openOgnevoyUtvPicker()); return; }
+  if (!issuersList.length) { openNoEmployeeDataModal(); return; }
+  renderOgnevoyUtvList();
+  document.getElementById('ognevoyUtvPickerOverlay').classList.add('open');
+}
+function closeOgnevoyUtvPicker() {
+  document.getElementById('ognevoyUtvPickerOverlay').classList.remove('open');
+}
+function ognevoyUtvPickerOverlayClick(e) {
+  if (e.target === document.getElementById('ognevoyUtvPickerOverlay')) closeOgnevoyUtvPicker();
+}
+
+function renderOgnevoyUtvList() {
+  const list = document.getElementById('ognevoyUtvPickerList');
+  const ppuF = document.getElementById('ognevoyUtvPpuFilter').value;
+  const favs = ognevoyUtvFavs();
+
+  let items = issuersList.filter(p => !ppuF || p.ppu === ppuF);
+  const favItems   = items.filter(p => favs.includes(p.fio));
+  const otherItems = items.filter(p => !favs.includes(p.fio));
+
+  let html = '';
+  if (favItems.length) {
+    html += `<div class="ipm-section-label">⭐ Избранные</div>`;
+    favItems.forEach(p => { html += ognevoyUtvItemHtml(p, true); });
+  }
+  if (otherItems.length) {
+    if (favItems.length) html += `<div class="ipm-section-label">Все</div>`;
+    otherItems.forEach(p => { html += ognevoyUtvItemHtml(p, false); });
+  }
+  if (!items.length) html = `<div class="ipm-empty">Нет сотрудников с правом выдачи наряда</div>`;
+  list.innerHTML = html;
+}
+
+function ognevoyUtvItemHtml(p, isFav) {
+  const fioE  = p.fio.replace(/"/g, '&quot;');
+  const dolzhE = (p.dolzh || '').replace(/"/g, '&quot;');
+  return `<div class="ipm-item" onclick="selectOgnevoyUtv('${fioE}','${dolzhE}')">
+    <button class="ipm-star ${isFav ? 'on' : ''}" title="Избранное"
+      onclick="event.stopPropagation();toggleOgnevoyUtvFav('${fioE}',this)">★</button>
+    <div class="ipm-info">
+      <div class="ipm-fio">${p.fio}</div>
+      ${p.dolzh ? `<div class="ipm-dolzh">${p.dolzh}</div>` : ''}
+      ${p.ppu   ? `<div class="ipm-ppu">${p.ppu}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function toggleOgnevoyUtvFav(fio) {
+  ognevoyUtvFavToggle(fio);
+  renderOgnevoyUtvList();
+}
+
+function selectOgnevoyUtv(fio, dolzh) {
+  document.getElementById('ognevoyUtvFio').value   = fio;
+  document.getElementById('ognevoyUtvDolzh').value = dolzh;
+  checkOgnevoyButtons();
+  closeOgnevoyUtvPicker();
+  closeOgnevoyUtvAc();
+}
+
+let _ognevoyUtvAcIdx = -1;
+
+function ognevoyUtvOnInput() {
+  checkOgnevoyButtons();
+  const q = document.getElementById('ognevoyUtvFio').value.trim().toLowerCase();
+  if (!q || !issuersList.length) { closeOgnevoyUtvAc(); return; }
+
+  const matches = issuersList
+    .filter(p => p.fio.toLowerCase().includes(q))
+    .slice(0, 12);
+
+  if (!matches.length) { closeOgnevoyUtvAc(); return; }
+
+  _ognevoyUtvAcIdx = -1;
+  const el = document.getElementById('ognevoyUtvAcList');
+  el.innerHTML = matches.map((p, i) =>
+    `<div class="issuer-ac-item" data-i="${i}"
+      onmousedown="selectOgnevoyUtv('${p.fio.replace(/'/g,"\\'")}','${(p.dolzh||'').replace(/'/g,"\\'")}')">
+      <span class="issuer-ac-fio">${p.fio}</span>
+      ${p.dolzh ? `<span class="issuer-ac-dolzh">${p.dolzh}</span>` : ''}
+    </div>`
+  ).join('');
+  el.classList.add('open');
+}
+
+function ognevoyUtvKeyDown(e) {
+  const el = document.getElementById('ognevoyUtvAcList');
+  if (!el.classList.contains('open')) return;
+  const items = el.querySelectorAll('.issuer-ac-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _ognevoyUtvAcIdx = Math.min(_ognevoyUtvAcIdx + 1, items.length - 1);
+    items.forEach((it, i) => it.classList.toggle('active', i === _ognevoyUtvAcIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _ognevoyUtvAcIdx = Math.max(_ognevoyUtvAcIdx - 1, 0);
+    items.forEach((it, i) => it.classList.toggle('active', i === _ognevoyUtvAcIdx));
+  } else if (e.key === 'Enter' || e.key === 'Tab') {
+    if (_ognevoyUtvAcIdx >= 0 && items[_ognevoyUtvAcIdx]) {
+      e.preventDefault();
+      items[_ognevoyUtvAcIdx].dispatchEvent(new MouseEvent('mousedown'));
+    } else {
+      closeOgnevoyUtvAc();
+    }
+  } else if (e.key === 'Escape') {
+    closeOgnevoyUtvAc();
+  }
+}
+
+function closeOgnevoyUtvAc() {
+  document.getElementById('ognevoyUtvAcList').classList.remove('open');
+  _ognevoyUtvAcIdx = -1;
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ognevoy-utv-wrap')) closeOgnevoyUtvAc();
+});
+
+// ─── Пикер / автодополнение руководителя работ (Огневой, для Операторов) ──
+
+function ognevoyRukovFavKey() {
+  return 'ognevoy_rukov_favs_' + (currentUser ? currentUser.org : '_');
+}
+function ognevoyRukovFavs() {
+  try { return JSON.parse(localStorage.getItem(ognevoyRukovFavKey()) || '[]'); } catch { return []; }
+}
+function ognevoyRukovFavToggle(fio) {
+  let favs = ognevoyRukovFavs();
+  const idx = favs.indexOf(fio);
+  if (idx >= 0) favs.splice(idx, 1); else favs.push(fio);
+  localStorage.setItem(ognevoyRukovFavKey(), JSON.stringify(favs));
+}
+
+function openOgnevoyRukovPicker() {
+  if (!currentUser) { openLoginModal(); return; }
+  if (_personnelStatus !== 'ready') { _openPickerWhenReady(() => openOgnevoyRukovPicker()); return; }
+  if (!receiversList.length) { openNoEmployeeDataModal(); return; }
+  renderOgnevoyRukovList();
+  document.getElementById('ognevoyRukovPickerOverlay').classList.add('open');
+}
+function closeOgnevoyRukovPicker() {
+  document.getElementById('ognevoyRukovPickerOverlay').classList.remove('open');
+}
+function ognevoyRukovPickerOverlayClick(e) {
+  if (e.target === document.getElementById('ognevoyRukovPickerOverlay')) closeOgnevoyRukovPicker();
+}
+
+function renderOgnevoyRukovList() {
+  const list = document.getElementById('ognevoyRukovPickerList');
+  const ppuF = document.getElementById('ognevoyRukovPpuFilter').value;
+  const favs = ognevoyRukovFavs();
+
+  let items = receiversList.filter(p => !ppuF || p.ppu === ppuF);
+  const favItems   = items.filter(p => favs.includes(p.fio));
+  const otherItems = items.filter(p => !favs.includes(p.fio));
+
+  let html = '';
+  if (favItems.length) {
+    html += `<div class="ipm-section-label">⭐ Избранные</div>`;
+    favItems.forEach(p => { html += ognevoyRukovItemHtml(p, true); });
+  }
+  if (otherItems.length) {
+    if (favItems.length) html += `<div class="ipm-section-label">Все</div>`;
+    otherItems.forEach(p => { html += ognevoyRukovItemHtml(p, false); });
+  }
+  if (!items.length) html = `<div class="ipm-empty">Нет сотрудников, доступных для выбора</div>`;
+  list.innerHTML = html;
+}
+
+function ognevoyRukovItemHtml(p, isFav) {
+  const fioE   = p.fio.replace(/"/g, '&quot;');
+  const dolzhE = (p.dolzh || '').replace(/"/g, '&quot;');
+  return `<div class="ipm-item" onclick="selectOgnevoyRukov('${fioE}','${dolzhE}')">
+    <button class="ipm-star ${isFav ? 'on' : ''}" title="Избранное"
+      onclick="event.stopPropagation();toggleOgnevoyRukovFav('${fioE}',this)">★</button>
+    <div class="ipm-info">
+      <div class="ipm-fio">${p.fio}</div>
+      ${p.dolzh ? `<div class="ipm-dolzh">${p.dolzh}</div>` : ''}
+      ${p.ppu   ? `<div class="ipm-ppu">${p.ppu}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function toggleOgnevoyRukovFav(fio) {
+  ognevoyRukovFavToggle(fio);
+  renderOgnevoyRukovList();
+}
+
+function selectOgnevoyRukov(fio, dolzh) {
+  document.getElementById('ognevoyRukovFio').value   = fio;
+  document.getElementById('ognevoyRukovDolzh').value = dolzh;
+  checkOgnevoyButtons();
+  closeOgnevoyRukovPicker();
+  closeOgnevoyRukovAc();
+}
+
+let _ognevoyRukovAcIdx = -1;
+
+function ognevoyRukovOnInput() {
+  checkOgnevoyButtons();
+  const q = document.getElementById('ognevoyRukovFio').value.trim().toLowerCase();
+  if (!q || !receiversList.length) { closeOgnevoyRukovAc(); return; }
+
+  const matches = receiversList
+    .filter(p => p.fio.toLowerCase().includes(q))
+    .slice(0, 12);
+
+  if (!matches.length) { closeOgnevoyRukovAc(); return; }
+
+  _ognevoyRukovAcIdx = -1;
+  const el = document.getElementById('ognevoyRukovAcList');
+  el.innerHTML = matches.map((p, i) =>
+    `<div class="issuer-ac-item" data-i="${i}"
+      onmousedown="selectOgnevoyRukov('${p.fio.replace(/'/g,"\\'")}','${(p.dolzh||'').replace(/'/g,"\\'")}')">
+      <span class="issuer-ac-fio">${p.fio}</span>
+      ${p.dolzh ? `<span class="issuer-ac-dolzh">${p.dolzh}</span>` : ''}
+    </div>`
+  ).join('');
+  el.classList.add('open');
+}
+
+function ognevoyRukovKeyDown(e) {
+  const el = document.getElementById('ognevoyRukovAcList');
+  if (!el.classList.contains('open')) return;
+  const items = el.querySelectorAll('.issuer-ac-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _ognevoyRukovAcIdx = Math.min(_ognevoyRukovAcIdx + 1, items.length - 1);
+    items.forEach((it, i) => it.classList.toggle('active', i === _ognevoyRukovAcIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _ognevoyRukovAcIdx = Math.max(_ognevoyRukovAcIdx - 1, 0);
+    items.forEach((it, i) => it.classList.toggle('active', i === _ognevoyRukovAcIdx));
+  } else if (e.key === 'Enter' || e.key === 'Tab') {
+    if (_ognevoyRukovAcIdx >= 0 && items[_ognevoyRukovAcIdx]) {
+      e.preventDefault();
+      items[_ognevoyRukovAcIdx].dispatchEvent(new MouseEvent('mousedown'));
+    } else {
+      closeOgnevoyRukovAc();
+    }
+  } else if (e.key === 'Escape') {
+    closeOgnevoyRukovAc();
+  }
+}
+
+function closeOgnevoyRukovAc() {
+  document.getElementById('ognevoyRukovAcList').classList.remove('open');
+  _ognevoyRukovAcIdx = -1;
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ognevoy-rukov-wrap')) closeOgnevoyRukovAc();
+});
+
 // Сбрасывает базу сотрудников/оргданные в пустое состояние — вызывается,
 // когда лист организации не найден или пришли нераспознаваемые данные,
 // чтобы пикеры показывали «База сотрудников недоступна», а не чужие/старые данные.
@@ -3982,8 +4329,10 @@ function _resetOrgPersonnelData() {
   orgApplicationTypes = [];
   orgPprData = [];
   rebuildIssuerPpuFilter();
+  rebuildIssuerPpuFilter('ognevoyUtvPpuFilter');
   rebuildCrewPpuFilter();
   rebuildRukovPpuFilter();
+  rebuildRukovPpuFilter('ognevoyRukovPpuFilter');
   updateCrewPickerBtn();
   renderCustomCheckboxes();
 }
@@ -4135,8 +4484,10 @@ function loadOrgPersonnel() {
       receiversList.sort((a, b) => a.fio.localeCompare(b.fio, 'ru'));
       pprvApproversList.sort((a, b) => a.fio.localeCompare(b.fio, 'ru'));
       rebuildIssuerPpuFilter();
+      rebuildIssuerPpuFilter('ognevoyUtvPpuFilter');
       rebuildCrewPpuFilter();
       rebuildRukovPpuFilter();
+      rebuildRukovPpuFilter('ognevoyRukovPpuFilter');
       updateCrewPickerBtn();
       _updatePprPickBtn();
       renderCustomCheckboxes();
@@ -4995,7 +5346,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.51';
+const CURRENT_VERSION = 'v3.53';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -5837,8 +6188,11 @@ function clearFormUI(withRows) {
   });
   OZP_FACTORS.forEach((_, i) => { const el = document.getElementById('ozpFactor' + i); if (el) el.checked = false; });
   OZP_SIZ_ROWS.forEach(row => { const el = document.getElementById(row.id); if (el) el.value = ''; });
-  ['ognevoyUtvFio','ognevoyUtvDolzh','ognevoyNomer','ognevoyDateStart','ognevoyRukovFio','ognevoyRukovDolzh',
-   'ognevoyMesto','ognevoySoderzhanie','ognevoyDateNachalo','ognevoyVremyaNachalo','ognevoyDateOkonch','ognevoyVremyaOkonch'].forEach(id => {
+  ['fieldOgnevoyOrg','fieldOgnevoyRukovFio','fieldOgnevoyRukovDolzh'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.classList.remove('auth-locked');
+  });
+  ['ognevoyOrg','ognevoyUtvFio','ognevoyUtvDolzh','ognevoyNomer','ognevoyDateStart','ognevoyRukovFio','ognevoyRukovDolzh',
+   'ognevoyMesto','ognevoySoderzhanie'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const ognBody = document.getElementById('ognevoyExecBody');
@@ -5919,28 +6273,33 @@ function _collectOgnevoySnapshot() {
   const g = id => document.getElementById(id)?.value || '';
   const executors = [];
   document.querySelectorAll('#ognevoyExecBody tr').forEach(tr => {
-    executors.push({ fio: tr.querySelector('.ogn-fio')?.value || '', prof: tr.querySelector('.ogn-prof')?.value || '' });
+    const c = tr.querySelectorAll('.cell-edit');
+    executors.push({ fio: c[0]?.textContent.trim() || '', prof: c[1]?.textContent.trim() || '' });
   });
   return {
+    org: g('ognevoyOrg'),
     utvFio: g('ognevoyUtvFio'), utvDolzh: g('ognevoyUtvDolzh'), nomer: g('ognevoyNomer'),
     dateStart: g('ognevoyDateStart'), rukovFio: g('ognevoyRukovFio'), rukovDolzh: g('ognevoyRukovDolzh'),
-    mesto: g('ognevoyMesto'), soderzhanie: g('ognevoySoderzhanie'),
-    dateNachalo: g('ognevoyDateNachalo'), vremyaNachalo: g('ognevoyVremyaNachalo'),
-    dateOkonch: g('ognevoyDateOkonch'), vremyaOkonch: g('ognevoyVremyaOkonch'),
     executors,
   };
+}
+
+function _syncOgnevoyReadonlyFields() {
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  setVal('ognevoyMesto', document.getElementById('mesto')?.value.trim());
+  setVal('ognevoySoderzhanie', document.getElementById('vidRabot')?.value.trim());
+  checkOgnevoyButtons();
 }
 
 function _applyOgnevoySnapshot(snap) {
   const set = (id, val) => { if (val == null) return; const el = document.getElementById(id); if (el) el.value = val; };
   const tbody = document.getElementById('ognevoyExecBody');
   if (tbody) { tbody.innerHTML = ''; _ognevoyRowCount = 0; }
+  _syncOgnevoyReadonlyFields();
   if (!snap) { checkOgnevoyButtons(); return; }
+  set('ognevoyOrg', snap.org);
   set('ognevoyUtvFio', snap.utvFio); set('ognevoyUtvDolzh', snap.utvDolzh); set('ognevoyNomer', snap.nomer);
   set('ognevoyDateStart', snap.dateStart); set('ognevoyRukovFio', snap.rukovFio); set('ognevoyRukovDolzh', snap.rukovDolzh);
-  set('ognevoyMesto', snap.mesto); set('ognevoySoderzhanie', snap.soderzhanie);
-  set('ognevoyDateNachalo', snap.dateNachalo); set('ognevoyVremyaNachalo', snap.vremyaNachalo);
-  set('ognevoyDateOkonch', snap.dateOkonch); set('ognevoyVremyaOkonch', snap.vremyaOkonch);
   (snap.executors || []).forEach(e => addOgnevoyRow(e.fio, e.prof));
   checkOgnevoyButtons();
 }
@@ -6605,7 +6964,7 @@ function switchNaryadType(type) {
     btn.style.color = type === t ? '#fff' : 'var(--navy)';
   });
   if (type === 'ozp') { _renderOzpFactorsAndSiz(); _syncOzpAutoFields(); _renderOzpFilesList(); checkOzpButtons(); }
-  if (type === 'ognevoy') { checkOgnevoyButtons(); }
+  if (type === 'ognevoy') { _syncOgnevoyReadonlyFields(); }
 }
 
 // Организация и ФИО/должность руководителя — жёстко из профиля авторизованного
@@ -6801,25 +7160,55 @@ async function buildOzpDocument(data) {
 let _ognevoyRowCount = 0;
 
 function addOgnevoyRow(fio = '', prof = '') {
+  _ognevoyRowCount++;
   const tbody = document.getElementById('ognevoyExecBody');
-  const idx = _ognevoyRowCount++;
   const tr = document.createElement('tr');
-  tr.dataset.idx = idx;
-  tr.innerHTML =
-    `<td style="padding:4px 6px;"><input type="text" class="ogn-fio" value="${fio.replace(/"/g, '&quot;')}"></td>` +
-    `<td style="padding:4px 6px;"><input type="text" class="ogn-prof" value="${prof.replace(/"/g, '&quot;')}"></td>` +
-    `<td style="text-align:center;"><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:#e05252;cursor:pointer;font-size:16px;">×</button></td>`;
+  const id = _ognevoyRowCount;
+  tr.dataset.id = id;
+
+  tr.innerHTML = `
+    <td class="td-drag" draggable="false" title="Перетащить строку">
+      <span class="drag-handle">⠿</span>
+    </td>
+    <td class="td-num">${id}</td>
+    <td class="cell-edit" contenteditable="true" tabindex="0" data-placeholder="Иванов Иван Иванович">${fio.replace(/</g, '&lt;')}</td>
+    <td class="cell-edit" contenteditable="true" tabindex="0" data-placeholder="Электрогазосварщик">${prof.replace(/</g, '&lt;')}</td>
+    <td>
+      <button class="btn-del-row" onclick="delOgnevoyRow(this)" title="Удалить строку">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </td>`;
+
   tbody.appendChild(tr);
+  tr.querySelectorAll('.cell-edit').forEach(td => {
+    td.addEventListener('input', () => { checkOgnevoyButtons(); scheduleSave(); });
+  });
+}
+
+function delOgnevoyRow(btn) {
+  btn.closest('tr').remove();
+  renumberOgnevoyRows();
+  checkOgnevoyButtons();
+  scheduleSave();
+}
+
+function renumberOgnevoyRows() {
+  document.querySelectorAll('#ognevoyExecBody tr').forEach((tr, i) => {
+    tr.querySelector('.td-num').textContent = i + 1;
+  });
 }
 
 function pullOgnevoyFromGeneral() {
   const g = id => document.getElementById(id)?.value.trim() || '';
   document.getElementById('ognevoyMesto').value = g('mesto');
   document.getElementById('ognevoySoderzhanie').value = g('vidRabot');
-  document.getElementById('ognevoyRukovFio').value = g('rukovFio');
-  document.getElementById('ognevoyRukovDolzh').value = g('rukovDolzh');
   document.getElementById('ognevoyDateStart').value = g('dateStart');
-  document.getElementById('ognevoyDateNachalo').value = g('dateStart');
+  if (!document.getElementById('ognevoyRukovFio').value) {
+    document.getElementById('ognevoyRukovFio').value = g('rukovFio');
+    document.getElementById('ognevoyRukovDolzh').value = g('rukovDolzh');
+  }
 
   const tbody = document.getElementById('ognevoyExecBody');
   tbody.innerHTML = '';
@@ -6847,17 +7236,17 @@ function collectOgnevoySheetData() {
   const g = id => document.getElementById(id)?.value.trim() || '';
   const executors = [];
   document.querySelectorAll('#ognevoyExecBody tr').forEach(tr => {
-    const fio = tr.querySelector('.ogn-fio')?.value.trim();
-    const prof = tr.querySelector('.ogn-prof')?.value.trim();
+    const c = tr.querySelectorAll('.cell-edit');
+    const fio = c[0]?.textContent.trim();
+    const prof = c[1]?.textContent.trim();
     if (fio) executors.push({ fio, prof });
   });
   return {
+    org: g('ognevoyOrg'),
     utvFio: g('ognevoyUtvFio'), utvDolzh: g('ognevoyUtvDolzh'),
     nomer: g('ognevoyNomer'), dateStart: g('ognevoyDateStart'),
     rukovFio: g('ognevoyRukovFio'), rukovDolzh: g('ognevoyRukovDolzh'),
     mesto: g('ognevoyMesto'), soderzhanie: g('ognevoySoderzhanie'),
-    dateNachalo: g('ognevoyDateNachalo'), vremyaNachalo: g('ognevoyVremyaNachalo'),
-    dateOkonch: g('ognevoyDateOkonch'), vremyaOkonch: g('ognevoyVremyaOkonch'),
     executors,
   };
 }
@@ -6914,6 +7303,7 @@ async function buildOgnevoySheetDoc(data) {
     p(`НАРЯД-ДОПУСК № ${data.nomer || '_______'}`, { bold: true, size: 28, align: AlignmentType.CENTER }),
     p('на выполнение огневых работ', { bold: true, size: 22, align: AlignmentType.CENTER, after: 200 }),
 
+    p(`Организация: ${data.org || '_______________________________'}`, { after: 120 }),
     p(`1. Выдан (кому): ${[data.rukovDolzh, data.rukovFio].filter(Boolean).join(' ') || '_______________________________'}      Дата: ${fmtDate(data.dateStart)}`),
     p(`2. На выполнение работ: ${data.soderzhanie || '_______________________________'}`),
     p(`3. Место проведения работ по координатам: ${data.mesto || '_______________________________'}`, { after: 200 }),
@@ -6933,7 +7323,7 @@ async function buildOgnevoySheetDoc(data) {
   }
 
   children.push(p(' ', { after: 100 }));
-  children.push(p(`5. Планируемое время проведения работ: Начало ${data.vremyaNachalo || '____'} ${fmtDate(data.dateNachalo)}      Окончание ${data.vremyaOkonch || '____'} ${fmtDate(data.dateOkonch)}`, { after: 100 }));
+  children.push(p('5. Время проведения работ: Начало _______ Окончание _______ (заполняется вручную по факту)', { after: 100 }));
 
   children.push(p('6. Меры по обеспечению пожарной безопасности места проведения работ обеспечить:', { bold: true, after: 80 }));
   OGNEVOY_FIRE_SAFETY_MEASURES.forEach((m, i) => {
@@ -6961,6 +7351,19 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.53', date: '07.07.2026',
+    changes: [
+      'У авторизованного пользователя организация и ФИО/должность руководителя работ больше не отображаются на форме (кроме операторов — им по-прежнему доступен ввод руководителя)',
+    ]
+  },
+  {
+    version: 'v3.52', date: '07.07.2026',
+    changes: [
+      'Лист «Огневой» переоформлен блоками по образцу общестроительного: организация и руководитель работ теперь через пикеры/автодополнение по базе сотрудников, вкладка идёт сразу после «Общестрой»',
+      'Из огневого наряда убраны поля планового времени начала/окончания работ — по факту оно проставляется от руки на бумажном бланке',
+    ]
+  },
   {
     version: 'v3.51', date: '07.07.2026',
     changes: [
