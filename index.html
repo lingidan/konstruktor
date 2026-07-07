@@ -1694,7 +1694,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.62</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.66</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -5345,7 +5345,7 @@ async function buildPPRVDocument(data) {
       ] }),
       ...(brigade.length ? brigade : [{ fio: '', itog: '' }]).map((e, i) => new TableRow({ children: [
         cell(String(i + 1), { width: colBNum, align: AlignmentType.CENTER }),
-        cell(e.fio || '', { width: colBFio }),
+        cell(toInitials(e.fio || ''), { width: colBFio }),
         cell(e.itog || '', { width: colBDolzh }),
         cell('', { width: colBSign })
       ] })),
@@ -5369,7 +5369,7 @@ async function buildPPRVDocument(data) {
       children: [
         p('Утверждаю:', { bold: true, align: AlignmentType.RIGHT, spacing: { after: 0 } }),
         p(data.org || '', { bold: true, align: AlignmentType.RIGHT, spacing: { after: 0 } }),
-        p('_________________  ' + (data.utvPprv || ''), { bold: true, align: AlignmentType.RIGHT, spacing: { after: 0 } }),
+        p('_________________  ' + toInitials(data.utvPprv || ''), { bold: true, align: AlignmentType.RIGHT, spacing: { after: 0 } }),
         p(formatRuDate(data.dateStart), { bold: true, align: AlignmentType.RIGHT, spacing: { after: 160 } }),
 
         p('План', { align: AlignmentType.CENTER, size: 28, spacing: { after: 0 } }),
@@ -5407,7 +5407,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.62';
+const CURRENT_VERSION = 'v3.66';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -6291,6 +6291,7 @@ function saveFormData() {
     vidRabot:   document.getElementById('vidRabot').value,
     sec6Rows:   document.getElementById('sec6Rows').value,
     sec10Rows:  document.getElementById('sec10Rows').value,
+    sec11Rows:  document.getElementById('sec11Rows').value,
     cbStates,
     execRows,
     naryadType: _naryadType,
@@ -6400,7 +6401,7 @@ function _formSnapshot() {
     naradVydalDolzh: g('naradVydalDolzh'), naradVydalFio: g('naradVydalFio'),
     rukovDolzh: g('rukovDolzh'), rukovFio: g('rukovFio'),
     utvPprv: g('utvPprv'), mesto: g('mesto'), vidRabot: g('vidRabot'),
-    sec6Rows: g('sec6Rows'), sec10Rows: g('sec10Rows'),
+    sec6Rows: g('sec6Rows'), sec10Rows: g('sec10Rows'), sec11Rows: g('sec11Rows'),
     cbStates, execRows
   };
 }
@@ -6414,12 +6415,14 @@ function _applySnapshot(snap) {
   updateNaradVydal();
   set('rukovDolzh', snap.rukovDolzh); set('rukovFio', snap.rukovFio);
   set('utvPprv', snap.utvPprv); set('mesto', snap.mesto); set('vidRabot', snap.vidRabot);
-  set('sec6Rows', snap.sec6Rows); set('sec10Rows', snap.sec10Rows);
+  set('sec6Rows', snap.sec6Rows); set('sec10Rows', snap.sec10Rows); set('sec11Rows', snap.sec11Rows);
   if (snap.dateStart) setEndDate();
   const sr6 = document.getElementById('sec6RowsValue');
   if (sr6 && snap.sec6Rows) sr6.textContent = snap.sec6Rows === 'default' ? 'По умолчанию' : snap.sec6Rows;
   const sr10 = document.getElementById('sec10RowsValue');
   if (sr10 && snap.sec10Rows) sr10.textContent = snap.sec10Rows;
+  const sr11 = document.getElementById('sec11RowsValue');
+  if (sr11 && snap.sec11Rows) sr11.textContent = snap.sec11Rows;
   if (snap.cbStates) {
     Object.entries(snap.cbStates).forEach(([id, checked]) => {
       const el = document.getElementById(id); if (el) el.checked = checked;
@@ -6526,10 +6529,12 @@ function loadFormData() {
   set('vidRabot',   snap.vidRabot);
   set('sec6Rows',   snap.sec6Rows);
   set('sec10Rows',  snap.sec10Rows);
+  set('sec11Rows',  snap.sec11Rows);
 
   if (snap.dateStart) setEndDate();
   if (snap.sec6Rows) document.getElementById('sec6RowsValue').textContent = snap.sec6Rows === 'default' ? 'По умолчанию' : snap.sec6Rows;
   if (snap.sec10Rows) document.getElementById('sec10RowsValue').textContent = snap.sec10Rows;
+  if (snap.sec11Rows) document.getElementById('sec11RowsValue').textContent = snap.sec11Rows;
 
   if (snap.cbStates) {
     Object.entries(snap.cbStates).forEach(([id, checked]) => {
@@ -6581,16 +6586,17 @@ async function downloadKarta(btn) {
     // Reduce top margin to minimum so card fits on one page yet isn't cut by printer
     xml = xml.replace(/w:top="[^"]*"/, 'w:top="142"');
 
-    const rprU = '<w:rPr><w:rFonts w:ascii="Times New Roman" w:cs="Times New Roman" w:eastAsia="Times New Roman" w:hAnsi="Times New Roman"/><w:u w:val="single"/><w:rtl w:val="0"/></w:rPr>';
+    const rprU = '<w:rPr><w:rFonts w:ascii="Times New Roman" w:cs="Times New Roman" w:eastAsia="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="18"/><w:szCs w:val="18"/><w:u w:val="single"/><w:rtl w:val="0"/></w:rPr>';
     function fillU(src, oldText, label, val) {
       const tag = '<w:t xml:space="preserve">' + oldText + '</w:t></w:r>';
       const repl = '<w:t xml:space="preserve">' + label + '</w:t></w:r><w:r>' + rprU + '<w:t>' + val + '</w:t></w:r>';
       return src.replace(tag, repl);
     }
+    const rukovShortKarta = toInitials(data.rukov || '');
     xml = fillU(xml,
       '6. Ответственный за выполнение мероприятий_______________________________',
       '6. Ответственный за выполнение мероприятий ',
-      data.rukov || ''
+      rukovShortKarta
     );
     xml = fillU(xml,
       '7.Приложение к наряду допуску №___________',
@@ -6600,7 +6606,7 @@ async function downloadKarta(btn) {
     xml = fillU(xml,
       '8.Руководитель работ_____________________________________',
       '8.Руководитель работ ',
-      data.rukov || ''
+      rukovShortKarta
     );
 
     zip.file('word/document.xml', xml);
@@ -6660,6 +6666,7 @@ async function buildOgnevoyDocument(data) {
       spacing: opts.spacing || { after: 0, line: 200, lineRule: 'auto' },
       children: [run(text, opts)],
     };
+    if (opts.indent) cfg.indent = opts.indent;
     if (opts.borderBottom) cfg.border = { bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000', space: 1 } };
     return new Paragraph(cfg);
   }
@@ -6873,7 +6880,7 @@ async function buildOgnevoyDocument(data) {
             run([naradVydalDolzh, naradVydalShortFio].filter(Boolean).join('  ') || '____________________'),
           ],
         }),
-        p('', { align: AlignmentType.RIGHT, spacing: { after: 0, line: 200, lineRule: 'auto' }, borderBottom: true }),
+        p('', { align: AlignmentType.RIGHT, spacing: { after: 0, line: 200, lineRule: 'auto' }, borderBottom: true, indent: { left: 7000 } }),
         p(dateStr, { align: AlignmentType.RIGHT }),
         hint('ф.и.о., подпись', { align: AlignmentType.RIGHT }),
 
@@ -7132,6 +7139,8 @@ function collectOzpFormData() {
 }
 
 async function downloadOzp(btn) {
+  _pendingDownload = 'ozp';
+  if (!await ensureActualVersion()) return;
   const data = collectOzpFormData();
   const orig = btn.innerHTML;
   btn.innerHTML = '⏳ Формирование документа...';
@@ -7390,6 +7399,9 @@ function pullOgnevoyFromGeneral() {
     document.getElementById('ognevoyRukovFio').value = g('rukovFio');
     document.getElementById('ognevoyRukovDolzh').value = g('rukovDolzh');
   }
+  // «Кто утвердил» на Огневом — то же лицо, что выдаёт наряд на общестроительном
+  document.getElementById('ognevoyUtvFio').value = g('naradVydalFio');
+  document.getElementById('ognevoyUtvDolzh').value = g('naradVydalDolzh');
 
   const tbody = document.getElementById('ognevoyExecBody');
   tbody.innerHTML = '';
@@ -7440,6 +7452,8 @@ function collectOgnevoySheetData() {
 }
 
 async function downloadOgnevoySheet(btn) {
+  _pendingDownload = 'ognevSheet';
+  if (!await ensureActualVersion()) return;
   const data = collectOgnevoySheetData();
   const orig = btn.innerHTML;
   btn.innerHTML = '⏳ Формирование документа...';
@@ -7555,6 +7569,32 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.66', date: '07.07.2026',
+    changes: [
+      'Скачивание наряда ОЗП и наряда с листа «Огневой» теперь тоже проверяет актуальность версии перед формированием документа',
+      'Исправлена потеря выбранного количества строк в п.11 общестроительного наряда при перезагрузке страницы или переключении вкладки',
+    ]
+  },
+  {
+    version: 'v3.65', date: '07.07.2026',
+    changes: [
+      'Карта ОПФ: ФИО ответственного и руководителя сокращаются до фамилии с инициалами, шрифт подписей уменьшен — карта помещается на лист',
+      'В ППРв ФИО (утвердивший, состав бригады) сокращаются до фамилии с инициалами',
+    ]
+  },
+  {
+    version: 'v3.64', date: '12.07.2026',
+    changes: [
+      'Кнопка «Подтянуть данные из общестроительного» на листе «Огневой» теперь переносит и поле «Кто утвердил» — то же лицо, что выдаёт наряд на общестроительном листе',
+    ]
+  },
+  {
+    version: 'v3.63', date: '12.07.2026',
+    changes: [
+      'В шапке «УТВЕРЖДАЮ» Огневого наряда строка для подписи сокращена до логичной ширины, а не на всю страницу',
+    ]
+  },
   {
     version: 'v3.62', date: '12.07.2026',
     changes: [
@@ -10301,6 +10341,8 @@ document.addEventListener('keydown', e => {
     akt:   'btnAkt',
     karta: 'btnKarta',
     ognev: 'btnOgnev',
+    ozp:   'btnOzpDl',
+    ognevSheet: 'btnOgnevoyDl',
   };
   const btnId = map[pending];
   if (!btnId) return;
