@@ -1694,7 +1694,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.57</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.58</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2322,10 +2322,21 @@
           <tbody id="ognevoyExecBody"></tbody>
         </table>
       </div>
-      <button class="btn-add-row" onclick="addOgnevoyRow()">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Добавить строку
-      </button>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+        <button class="btn-add-row" onclick="addOgnevoyRow()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Добавить строку
+        </button>
+        <button class="btn-pick-crew" id="btnPickCrewOgnevoy" onclick="openCrewPicker('ognevoy')" style="display:none">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Из базы
+        </button>
+        <button class="btn-add-row" onclick="sortOgnevoyCrewAlpha()" title="Сортировать исполнителей по алфавиту (строка 1 — бригадир, не сортируется)">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="12" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/><polyline points="17 8 21 4 17 0"/><polyline points="17 20 21 16 17 12"/></svg>
+          А→Я
+        </button>
+        <span id="ognevoyExecCount" style="font-size:12px; color:var(--gray-400)"></span>
+      </div>
 
       <div style="margin-top:20px;font-size:12px;color:var(--gray-400);line-height:1.5;">
         Меры по обеспечению пожарной безопасности места проведения работ формируются автоматически по типовому регламенту
@@ -3494,14 +3505,18 @@ function _personnelNotifyPending(success) {
 function updateCrewPickerBtn() {
   const btn = document.getElementById('btnPickCrew');
   if (btn) btn.style.display = currentUser ? 'inline-flex' : 'none';
+  const ognBtn = document.getElementById('btnPickCrewOgnevoy');
+  if (ognBtn) ognBtn.style.display = currentUser ? 'inline-flex' : 'none';
 }
 
 // ─── Пикер бригады ────────────────────────────────────────────────────────
 
 let _crewPickerSel = new Set();
 
-function openCrewPicker() {
-  if (_personnelStatus !== 'ready') { _openPickerWhenReady(() => openCrewPicker()); return; }
+let _crewPickerTarget = 'exec'; // 'exec' | 'ognevoy'
+function openCrewPicker(target) {
+  _crewPickerTarget = target || 'exec';
+  if (_personnelStatus !== 'ready') { _openPickerWhenReady(() => openCrewPicker(_crewPickerTarget)); return; }
   if (!allEmployeesList.length) { openNoEmployeeDataModal(); return; }
   _crewPickerSel.clear();
   document.getElementById('crewSearch').value = '';
@@ -3519,8 +3534,9 @@ function crewPickerOverlayClick(e) {
 }
 
 function _getExecFios() {
+  const bodyId = _crewPickerTarget === 'ognevoy' ? 'ognevoyExecBody' : 'execBody';
   const set = new Set();
-  document.querySelectorAll('#execBody tr').forEach(tr => {
+  document.querySelectorAll('#' + bodyId + ' tr').forEach(tr => {
     const c = tr.querySelector('.cell-edit');
     if (c) set.add(c.textContent.trim().toLowerCase());
   });
@@ -3701,18 +3717,24 @@ document.addEventListener('scroll', () => {
 }, true);
 
 function addCrewSelected() {
+  const isOgnevoy = _crewPickerTarget === 'ognevoy';
   _crewPickerSel.forEach(fio => {
     const emp = allEmployeesList.find(p => p.fio === fio);
     if (!emp) return;
-    addRow();
-    const tr    = document.getElementById('execBody').lastElementChild;
-    const cells = tr.querySelectorAll('.cell-edit');
-    cells[0].textContent = emp.fio;
-    cells[1].textContent = emp.dolzh;
-    cells[2].textContent = emp.razr;
-    cells[3].textContent = emp.grEB;
-    cells[4].textContent = emp.grVys;
+    if (isOgnevoy) {
+      addOgnevoyRow(emp.fio, emp.dolzh, emp.razr, emp.grEB);
+    } else {
+      addRow();
+      const tr    = document.getElementById('execBody').lastElementChild;
+      const cells = tr.querySelectorAll('.cell-edit');
+      cells[0].textContent = emp.fio;
+      cells[1].textContent = emp.dolzh;
+      cells[2].textContent = emp.razr;
+      cells[3].textContent = emp.grEB;
+      cells[4].textContent = emp.grVys;
+    }
   });
+  if (isOgnevoy) checkOgnevoyButtons();
   scheduleSave();
   closeCrewPicker();
 }
@@ -5366,7 +5388,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.57';
+const CURRENT_VERSION = 'v3.58';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -7238,6 +7260,7 @@ function addOgnevoyRow(fio = '', dolzh = '', razr = '', grEB = '') {
     checkOgnevoyButtons();
     scheduleSave();
   });
+  updateOgnevoyExecCount();
 }
 
 // Вставка из буфера для таблицы исполнителей Огневого (аналог handleCellPaste)
@@ -7291,6 +7314,29 @@ function renumberOgnevoyRows() {
   document.querySelectorAll('#ognevoyExecBody tr').forEach((tr, i) => {
     tr.querySelector('.td-num').textContent = i + 1;
   });
+  updateOgnevoyExecCount();
+}
+
+function updateOgnevoyExecCount() {
+  const n = document.querySelectorAll('#ognevoyExecBody tr').length;
+  const el = document.getElementById('ognevoyExecCount');
+  if (el) el.textContent = n > 0 ? `Всего: ${n} чел.` : '';
+}
+
+function sortOgnevoyCrewAlpha() {
+  const tbody = document.getElementById('ognevoyExecBody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  if (rows.length < 3) return; // нечего сортировать
+  const first = rows[0]; // бригадир — не трогаем
+  const rest = rows.slice(1);
+  rest.sort((a, b) => {
+    const fa = (a.querySelector('[data-col="0"]')?.textContent || '').trim();
+    const fb = (b.querySelector('[data-col="0"]')?.textContent || '').trim();
+    return fa.localeCompare(fb, 'ru');
+  });
+  rest.forEach(tr => tbody.appendChild(tr));
+  renumberOgnevoyRows();
+  scheduleSave();
 }
 
 function pullOgnevoyFromGeneral() {
@@ -7450,6 +7496,12 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.58', date: '07.07.2026',
+    changes: [
+      'В состав исполнителей листа «Огневой» добавлены кнопки «Из базы» (выбор сотрудников из базы) и «А→Я» (сортировка по алфавиту) — как на общестроительном',
+    ]
+  },
   {
     version: 'v3.57', date: '07.07.2026',
     changes: [
