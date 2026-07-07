@@ -807,9 +807,10 @@
   .issuer-wrap input { flex: 1; min-width: 0; }
   .issuer-pick-btn {
     flex-shrink: 0; background: var(--accent-light); border: 1.5px solid var(--accent);
-    border-radius: var(--radius); padding: 0 14px; cursor: pointer; color: var(--accent);
+    border-radius: var(--radius); cursor: pointer; color: var(--accent);
     font-size: 12px; line-height: 1; transition: background .15s, color .15s;
-    display: flex; align-items: center; gap: 5px; font-weight: 600; white-space: nowrap;
+    display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 600; white-space: nowrap;
+    width: 118px; height: 36px; box-sizing: border-box; padding: 0 8px;
   }
   .issuer-pick-btn:hover { background: var(--accent); color: white; }
 
@@ -1693,7 +1694,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.53</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.55</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1869,11 +1870,9 @@
 
         <div class="field col-span-2">
           <label>Вид работ <span class="req">*</span></label>
-          <div style="display:flex;gap:6px;align-items:stretch">
-            <textarea id="vidRabot" rows="3" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0;resize:vertical;font-family:inherit;font-size:14px;padding:9px 12px;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius);color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(46,122,191,.18)'" onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
-            <button type="button" onclick="openWorkTypePicker()" title="Выбрать вид работ из списка"
-              style="flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:background .15s,color .15s"
-              onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--accent-light)';this.style.color='var(--accent)'">
+          <div style="display:flex;gap:6px;align-items:flex-start">
+            <textarea id="vidRabot" rows="1" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0;min-height:36px;resize:vertical;font-family:inherit;font-size:14px;padding:9px 12px;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius);color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(46,122,191,.18)'" onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
+            <button class="issuer-pick-btn" type="button" onclick="openWorkTypePicker()" title="Выбрать вид работ из списка">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
               Из списка
             </button>
@@ -1882,25 +1881,20 @@
 
         <div class="field col-span-2">
           <label>Место выполнения работ <span class="req">*</span></label>
-          <div style="display:flex;gap:6px;align-items:stretch">
-            <textarea id="mesto" rows="3" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0;resize:vertical;font-family:inherit;font-size:14px;padding:9px 12px;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius);color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(46,122,191,.18)'" onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
-<button type="button" onclick="openRoomPicker()" title="Выбрать помещения на плане"
-              style="flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:background .15s,color .15s"
-              onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--accent-light)';this.style.color='var(--accent)'"
-              >
+          <div style="display:flex;gap:6px;align-items:flex-start">
+            <textarea id="mesto" rows="1" placeholder="" oninput="checkButtons()" style="flex:1;min-width:0;min-height:36px;resize:vertical;font-family:inherit;font-size:14px;padding:9px 12px;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius);color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(46,122,191,.18)'" onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
+            <button class="issuer-pick-btn" type="button" onclick="openRoomPicker()" title="Выбрать помещения на плане">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-              Выбрать помещения
+              Помещения
             </button>
           </div>
         </div>
 
         <div class="field col-span-2">
           <label>ППР (проект производства работ)</label>
-          <div style="display:flex;gap:6px;align-items:stretch">
+          <div style="display:flex;gap:6px;align-items:flex-start">
             <input type="text" id="ppr" placeholder="" style="flex:1;min-width:0">
-            <button type="button" id="pprPickBtn" onclick="openPprPicker()" title="Выбрать ППР из реестра"
-              style="flex-shrink:0;background:var(--accent-light);color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--radius);padding:0 14px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:background .15s,color .15s"
-              onmouseover="this.style.background='var(--accent)';this.style.color='white'" onmouseout="this.style.background='var(--accent-light)';this.style.color='var(--accent)'">
+            <button class="issuer-pick-btn" type="button" id="pprPickBtn" onclick="openPprPicker()" title="Выбрать ППР из реестра">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
               Из списка
             </button>
@@ -5346,7 +5340,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.53';
+const CURRENT_VERSION = 'v3.55';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -7351,6 +7345,18 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.55', date: '07.07.2026',
+    changes: [
+      'Все кнопки-пикеры (руководитель, вид работ, помещения, ППР) приведены к единому компактному виду',
+    ]
+  },
+  {
+    version: 'v3.54', date: '07.07.2026',
+    changes: [
+      'Кнопка «Выбрать помещения» выровнена по единому стилю с остальными кнопками-пикерами',
+    ]
+  },
   {
     version: 'v3.53', date: '07.07.2026',
     changes: [
