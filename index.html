@@ -1644,7 +1644,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.47</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.48</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3105,6 +3105,10 @@ function _renderAccounts(users) {
           <div style="min-width:120px;flex:1;">
             <div style="font-size:10px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">Организация</div>
             <div style="font-size:12px;color:var(--gray-600);">${_esc(u.org)}</div>
+          </div>
+          <div style="min-width:70px;text-align:center;">
+            <div style="font-size:10px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">Скачано</div>
+            <div style="font-size:13px;font-weight:600;color:var(--navy);">${u.docsCount || 0}</div>
           </div>
           <button onclick="toggleResetForm(${i})"
             style="padding:7px 14px;font-size:12px;font-weight:600;background:white;color:var(--navy);
@@ -4889,7 +4893,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.47';
+const CURRENT_VERSION = 'v3.48';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -6855,6 +6859,13 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.48', date: '07.07.2026',
+    changes: [
+      'Исправлен счётчик скачанных документов — не фиксировался из-за заглушки на сервере',
+      'Счётчик скачиваний теперь виден в панели «Управление аккаунтами» напротив каждого пользователя',
+    ]
+  },
   {
     version: 'v3.47', date: '06.07.2026',
     changes: [
