@@ -1694,7 +1694,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.67</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.70</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2065,10 +2065,16 @@
     </div>
     <div class="card-body">
 
+      <button onclick="pullOzpFromGeneral()" style="background:var(--surface);color:var(--navy);border:2px solid var(--navy);
+        border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;">
+        ⇩ Подтянуть данные из общестроительного
+      </button>
+
       <div class="grid grid-2">
-        <div class="field col-span-2">
-          <label>Организация <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(из профиля, нередактируемо)</span></label>
-          <input type="text" id="ozpOrg" readonly style="background:var(--gray-100,#f1f5f9);cursor:not-allowed;">
+        <div class="field col-span-2" id="fieldOzpOrg">
+          <label>Организация</label>
+          <input type="text" id="ozpOrg" placeholder="ООО «Название» или АО «Название»">
+          <span class="auth-value" id="ozpOrgDisplay"></span>
         </div>
         <div class="field">
           <label>Подразделение</label>
@@ -2083,51 +2089,36 @@
           <input type="date" id="ozpDateStart" oninput="checkOzpButtons()">
         </div>
 
-        <div class="field">
-          <label>ФИО руководителя работ <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(из профиля, нередактируемо)</span></label>
-          <input type="text" id="ozpRukovFio" readonly style="background:var(--gray-100,#f1f5f9);cursor:not-allowed;">
+        <div class="field" id="fieldOzpRukovFio">
+          <label>ФИО руководителя работ <span class="req">*</span></label>
+          <input type="text" id="ozpRukovFio" placeholder="Иванов Иван Иванович" oninput="checkOzpButtons()">
+          <span class="auth-value" id="ozpRukovFioDisplay"></span>
         </div>
-        <div class="field">
-          <label>Должность руководителя <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(из профиля)</span></label>
-          <input type="text" id="ozpRukovDolzh" readonly style="background:var(--gray-100,#f1f5f9);cursor:not-allowed;">
-        </div>
-
-        <div class="field">
-          <label>ФИО ответственного исполнителя <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(1-й в составе бригады)</span></label>
-          <input type="text" id="ozpIspolnFio" readonly style="background:var(--gray-100,#f1f5f9);cursor:not-allowed;">
-        </div>
-        <div class="field">
-          <label>Должность исполнителя</label>
-          <input type="text" id="ozpIspolnDolzh" readonly style="background:var(--gray-100,#f1f5f9);cursor:not-allowed;">
-        </div>
-
-        <div class="field">
-          <label>Наблюдающий <span class="req">*</span></label>
-          <select id="ozpNabludPick" onchange="_pickOzpRole('nablud', this.value)" style="margin-bottom:6px;"></select>
-          <input type="text" id="ozpNabludFio" placeholder="ФИО (если не из бригады)" oninput="checkOzpButtons()">
-        </div>
-        <div class="field">
-          <label>Должность наблюдающего</label>
-          <input type="text" id="ozpNabludDolzh" placeholder="">
-        </div>
-
-        <div class="field">
-          <label>Спасатель <span class="req">*</span></label>
-          <select id="ozpSpasPick" onchange="_pickOzpRole('spas', this.value)" style="margin-bottom:6px;"></select>
-          <input type="text" id="ozpSpasFio" placeholder="ФИО (если не из бригады)" oninput="checkOzpButtons()">
-        </div>
-        <div class="field">
-          <label>Должность спасателя</label>
-          <input type="text" id="ozpSpasDolzh" placeholder="">
+        <div class="field" id="fieldOzpRukovDolzh">
+          <label>Должность руководителя</label>
+          <input type="text" id="ozpRukovDolzh" placeholder="Мастер, прораб, начальник участка" oninput="checkOzpButtons()">
+          <span class="auth-value" id="ozpRukovDolzhDisplay"></span>
         </div>
 
         <div class="field col-span-2">
-          <label>Место выполнения работ <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(из общестроительного листа)</span></label>
-          <input type="text" id="ozpMesto" readonly style="background:var(--gray-100,#f1f5f9);cursor:not-allowed;">
+          <label>Место выполнения работ <span class="req">*</span></label>
+          <div style="display:flex;gap:6px;align-items:flex-start">
+            <textarea id="ozpMesto" rows="1" placeholder="" oninput="checkOzpButtons()" style="flex:1;min-width:0;min-height:36px;resize:vertical;font-family:inherit;font-size:14px;padding:9px 12px;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius);color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(46,122,191,.18)'" onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
+            <button class="issuer-pick-btn" type="button" onclick="openRoomPicker('ozpMesto')" title="Выбрать помещения на плане">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              Помещения
+            </button>
+          </div>
         </div>
         <div class="field col-span-2">
-          <label>Содержание работ <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(из общестроительного листа)</span></label>
-          <input type="text" id="ozpSoderzhanie" readonly style="background:var(--gray-100,#f1f5f9);cursor:not-allowed;">
+          <label>Содержание работ <span class="req">*</span></label>
+          <div style="display:flex;gap:6px;align-items:flex-start">
+            <textarea id="ozpSoderzhanie" rows="1" placeholder="" oninput="checkOzpButtons()" style="flex:1;min-width:0;min-height:36px;resize:vertical;font-family:inherit;font-size:14px;padding:9px 12px;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius);color:var(--text);background:var(--surface);transition:border-color .15s,box-shadow .15s;outline:none;line-height:1.5" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px rgba(46,122,191,.18)'" onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
+            <button class="issuer-pick-btn" type="button" onclick="openWorkTypePicker('ozpSoderzhanie')" title="Выбрать вид работ из списка">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Из списка
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -2148,26 +2139,88 @@
   <div class="card">
     <div class="card-header">
       <span class="block-num">Блок 3</span>
-      <h2>Состав бригады и системы безопасности</h2>
+      <h2>Состав бригады</h2>
     </div>
     <div class="card-body">
 
       <label style="font-size:12px;font-weight:600;color:var(--gray-700);letter-spacing:.2px;text-transform:uppercase;">
-        Состав бригады <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px;text-transform:none;">(из общестроительного листа)</span>
+        Состав бригады
       </label>
-      <div class="table-wrap" style="margin:8px 0 20px;">
+      <div class="table-wrap" style="margin:8px 0 12px;">
         <table>
           <thead>
             <tr>
+              <th style="width:28px"></th>
               <th>№</th>
               <th style="min-width:170px">ФИО</th>
               <th style="min-width:160px">Должность</th>
+              <th style="min-width:65px">Разряд</th>
+              <th style="min-width:75px">Группа ЭБ</th>
+              <th style="width:36px"></th>
             </tr>
           </thead>
-          <tbody id="ozpBrigadaList"></tbody>
+          <tbody id="ozpExecBody"></tbody>
         </table>
       </div>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
+        <button class="btn-add-row" onclick="addOzpRow()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Добавить строку
+        </button>
+        <button class="btn-pick-crew" id="btnPickCrewOzp" onclick="openCrewPicker('ozp')" style="display:none">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Из базы
+        </button>
+        <button class="btn-add-row" onclick="sortOzpCrewAlpha()" title="Сортировать исполнителей по алфавиту (строка 1 — бригадир, не сортируется)">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="12" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/><polyline points="17 8 21 4 17 0"/><polyline points="17 20 21 16 17 12"/></svg>
+          А→Я
+        </button>
+        <span id="ozpExecCount" style="font-size:12px; color:var(--gray-400)"></span>
+      </div>
 
+      <div class="grid grid-2">
+        <div class="field">
+          <label>Наблюдающий <span class="req">*</span></label>
+          <select id="ozpNabludPick" onchange="_pickOzpRole('nablud', this.value)" style="margin-bottom:6px;"></select>
+          <input type="text" id="ozpNabludFio" placeholder="ФИО (если не из бригады)" oninput="checkOzpButtons()" style="display:none;">
+        </div>
+        <div class="field">
+          <label>Должность наблюдающего</label>
+          <input type="text" id="ozpNabludDolzh" placeholder="">
+        </div>
+
+        <div class="field">
+          <label>Спасатель <span class="req">*</span></label>
+          <select id="ozpSpasPick" onchange="_pickOzpRole('spas', this.value)" style="margin-bottom:6px;"></select>
+          <input type="text" id="ozpSpasFio" placeholder="ФИО (если не из бригады)" oninput="checkOzpButtons()" style="display:none;">
+        </div>
+        <div class="field">
+          <label>Должность спасателя</label>
+          <input type="text" id="ozpSpasDolzh" placeholder="">
+        </div>
+
+        <div class="field col-span-2">
+          <label>Особые условия проведения работ</label>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;padding-top:6px;">
+            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;">
+              <input type="checkbox" id="ozpCondHeight"> Работа на высоте
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;">
+              <input type="checkbox" id="ozpCondFire"> Огневые работы
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ ОЗП БЛОК 4 -->
+  <div class="card">
+    <div class="card-header">
+      <span class="block-num">Блок 4</span>
+      <h2>Материалы, связь и системы безопасности</h2>
+    </div>
+    <div class="card-body">
       <div class="grid grid-2">
         <div class="field col-span-2">
           <label>Материалы и инструменты</label>
@@ -2184,10 +2237,10 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════ ОЗП БЛОК 4 -->
+  <!-- ═══════════════════════════════════════════════ ОЗП БЛОК 5 -->
   <div class="card">
     <div class="card-header">
-      <span class="block-num">Блок 4</span>
+      <span class="block-num">Блок 5</span>
       <h2>Скачивание</h2>
     </div>
     <div class="card-body">
@@ -2971,6 +3024,9 @@ function applyUserToForm() {
     fieldOgnevoyOrg:      { input: 'ognevoyOrg',      display: 'ognevoyOrgDisplay',      value: activeUser ? toGuillemets(activeUser.org) : null },
     fieldOgnevoyRukovFio: { input: 'ognevoyRukovFio',  display: 'ognevoyRukovFioDisplay',  value: (activeUser && !isOperator) ? activeUser.fio   : null },
     fieldOgnevoyRukovDolzh:{ input: 'ognevoyRukovDolzh', display: 'ognevoyRukovDolzhDisplay', value: (activeUser && !isOperator) ? activeUser.dolzh : null },
+    fieldOzpOrg:      { input: 'ozpOrg',      display: 'ozpOrgDisplay',      value: activeUser ? toGuillemets(activeUser.org) : null },
+    fieldOzpRukovFio: { input: 'ozpRukovFio',  display: 'ozpRukovFioDisplay',  value: (activeUser && !isOperator) ? activeUser.fio   : null },
+    fieldOzpRukovDolzh:{ input: 'ozpRukovDolzh', display: 'ozpRukovDolzhDisplay', value: (activeUser && !isOperator) ? activeUser.dolzh : null },
   };
   for (const [fieldId, cfg] of Object.entries(fields)) {
     const field   = document.getElementById(fieldId);
@@ -2994,9 +3050,6 @@ function applyUserToForm() {
   if (ognevoyRukovBtn) ognevoyRukovBtn.style.display = isOperator ? 'flex' : 'none';
   checkButtons();
   checkOgnevoyButtons();
-
-  // ОЗП: организация/руководитель синхронизируются жёстко из профиля (см. _syncOzpAutoFields).
-  if (typeof _syncOzpAutoFields === 'function' && _naryadType === 'ozp') _syncOzpAutoFields();
   checkOzpButtons();
 }
 
@@ -3537,6 +3590,8 @@ function updateCrewPickerBtn() {
   if (btn) btn.style.display = currentUser ? 'inline-flex' : 'none';
   const ognBtn = document.getElementById('btnPickCrewOgnevoy');
   if (ognBtn) ognBtn.style.display = currentUser ? 'inline-flex' : 'none';
+  const ozpBtn = document.getElementById('btnPickCrewOzp');
+  if (ozpBtn) ozpBtn.style.display = currentUser ? 'inline-flex' : 'none';
 }
 
 // ─── Пикер бригады ────────────────────────────────────────────────────────
@@ -3564,7 +3619,7 @@ function crewPickerOverlayClick(e) {
 }
 
 function _getExecFios() {
-  const bodyId = _crewPickerTarget === 'ognevoy' ? 'ognevoyExecBody' : 'execBody';
+  const bodyId = _crewPickerTarget === 'ognevoy' ? 'ognevoyExecBody' : _crewPickerTarget === 'ozp' ? 'ozpExecBody' : 'execBody';
   const set = new Set();
   document.querySelectorAll('#' + bodyId + ' tr').forEach(tr => {
     const c = tr.querySelector('.cell-edit');
@@ -3714,6 +3769,7 @@ function execAcSelect(e, fio, dolzh, razr, grEB, grVys) {
   if (cells[4]) cells[4].textContent = grVys;
   execAcHide();
   if (tr.closest('#ognevoyExecBody')) checkOgnevoyButtons();
+  if (tr.closest('#ozpExecBody')) { _syncOzpFields(); checkOzpButtons(); }
   scheduleSave();
 }
 
@@ -3748,11 +3804,14 @@ document.addEventListener('scroll', () => {
 
 function addCrewSelected() {
   const isOgnevoy = _crewPickerTarget === 'ognevoy';
+  const isOzp = _crewPickerTarget === 'ozp';
   _crewPickerSel.forEach(fio => {
     const emp = allEmployeesList.find(p => p.fio === fio);
     if (!emp) return;
     if (isOgnevoy) {
       addOgnevoyRow(emp.fio, emp.dolzh, emp.razr, emp.grEB);
+    } else if (isOzp) {
+      addOzpRow(emp.fio, emp.dolzh, emp.razr, emp.grEB);
     } else {
       addRow();
       const tr    = document.getElementById('execBody').lastElementChild;
@@ -3765,6 +3824,7 @@ function addCrewSelected() {
     }
   });
   if (isOgnevoy) checkOgnevoyButtons();
+  if (isOzp) { _syncOzpFields(); checkOzpButtons(); }
   scheduleSave();
   closeCrewPicker();
 }
@@ -4771,10 +4831,10 @@ function updateExecCount() {
 }
 
 // ─── Drag-and-Drop для строк таблицы исполнителей ─────────────────────────
-// Работает как для общестроительного (#execBody), так и для Огневого (#ognevoyExecBody)
+// Работает для общестроительного (#execBody), Огневого (#ognevoyExecBody) и ОЗП (#ozpExecBody)
 let _dndSrc = null;
 let _dndEnabled = false;
-const _DND_BODIES = '#execBody, #ognevoyExecBody';
+const _DND_BODIES = '#execBody, #ognevoyExecBody, #ozpExecBody';
 
 // Включаем draggable только когда зажат именно хэндл
 document.addEventListener('mousedown', e => {
@@ -4791,7 +4851,7 @@ document.addEventListener('mouseup', () => {
   _dndEnabled = false;
   // Сбрасываем draggable если drag так и не начался
   if (!_dndSrc) {
-    document.querySelectorAll('#execBody tr[draggable="true"], #ognevoyExecBody tr[draggable="true"]').forEach(tr => {
+    document.querySelectorAll('#execBody tr[draggable="true"], #ognevoyExecBody tr[draggable="true"], #ozpExecBody tr[draggable="true"]').forEach(tr => {
       tr.setAttribute('draggable', 'false');
     });
   }
@@ -4813,7 +4873,7 @@ document.addEventListener('dragover', e => {
   if (!tr || tr === _dndSrc || !tr.closest(_DND_BODIES) || tr.closest(_DND_BODIES) !== _dndSrc.closest(_DND_BODIES)) return;
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
-  document.querySelectorAll('#execBody tr.dnd-over, #ognevoyExecBody tr.dnd-over').forEach(r => r.classList.remove('dnd-over'));
+  document.querySelectorAll('#execBody tr.dnd-over, #ognevoyExecBody tr.dnd-over, #ozpExecBody tr.dnd-over').forEach(r => r.classList.remove('dnd-over'));
   tr.classList.add('dnd-over');
 });
 
@@ -4832,6 +4892,7 @@ document.addEventListener('drop', e => {
     tbody.insertBefore(_dndSrc, tr);
   }
   if (tbody.id === 'ognevoyExecBody') { renumberOgnevoyRows(); checkOgnevoyButtons(); }
+  else if (tbody.id === 'ozpExecBody') { renumberOzpRows(); _syncOzpFields(); checkOzpButtons(); }
   else { renumberRows(); }
   scheduleSave();
 });
@@ -4843,7 +4904,7 @@ document.addEventListener('dragend', () => {
     _dndSrc = null;
   }
   _dndEnabled = false;
-  document.querySelectorAll('#execBody tr.dnd-over, #ognevoyExecBody tr.dnd-over').forEach(r => r.classList.remove('dnd-over'));
+  document.querySelectorAll('#execBody tr.dnd-over, #ognevoyExecBody tr.dnd-over, #ozpExecBody tr.dnd-over').forEach(r => r.classList.remove('dnd-over'));
 });
 
 // ─── Форматирование даты в формат «дд» месяц гггг г. ──────────────────────
@@ -5418,7 +5479,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.67';
+const CURRENT_VERSION = 'v3.70';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -6258,6 +6319,7 @@ function clearFormUI(withRows) {
    'ozpMaterialy','ozpSvyaz'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+  ['ozpCondHeight','ozpCondFire'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
   OZP_FACTORS.forEach((_, i) => { const el = document.getElementById('ozpFactor' + i); if (el) el.checked = false; });
   OZP_SIZ_ROWS.forEach(row => { const el = document.getElementById(row.id); if (el) el.value = ''; });
   ['fieldOgnevoyOrg','fieldOgnevoyRukovFio','fieldOgnevoyRukovDolzh'].forEach(id => {
@@ -6319,26 +6381,46 @@ function _collectOzpSnapshot() {
   OZP_FACTORS.forEach((_, i) => { const el = document.getElementById('ozpFactor' + i); if (el) ozpFactors[i] = el.checked; });
   const sizValues = {};
   OZP_SIZ_ROWS.forEach(row => { sizValues[row.id] = g(row.id); });
+  const executors = [];
+  document.querySelectorAll('#ozpExecBody tr').forEach(tr => {
+    const c = tr.querySelectorAll('.cell-edit');
+    executors.push({
+      fio: c[0]?.textContent.trim() || '', dolzh: c[1]?.textContent.trim() || '',
+      razr: c[2]?.textContent.trim() || '', grEB: c[3]?.textContent.trim() || '',
+    });
+  });
   return {
-    podr: g('ozpPodr'), nomer: g('ozpNomer'), dateStart: g('ozpDateStart'),
+    org: g('ozpOrg'), podr: g('ozpPodr'), nomer: g('ozpNomer'), dateStart: g('ozpDateStart'),
+    rukovFio: g('ozpRukovFio'), rukovDolzh: g('ozpRukovDolzh'),
     nabludFio: g('ozpNabludFio'), nabludDolzh: g('ozpNabludDolzh'),
     spasFio: g('ozpSpasFio'), spasDolzh: g('ozpSpasDolzh'),
+    mesto: g('ozpMesto'), soderzhanie: g('ozpSoderzhanie'),
     materialy: g('ozpMaterialy'), svyaz: g('ozpSvyaz'),
-    ozpFactors, sizValues,
+    condHeight: !!document.getElementById('ozpCondHeight')?.checked,
+    condFire: !!document.getElementById('ozpCondFire')?.checked,
+    ozpFactors, sizValues, executors,
   };
 }
 
 function _applyOzpSnapshot(ozp) {
   _renderOzpFactorsAndSiz();
-  _syncOzpAutoFields();
   const set = (id, val) => { if (val == null) return; const el = document.getElementById(id); if (el) el.value = val; };
-  if (!ozp) { checkOzpButtons(); return; }
+  const tbody = document.getElementById('ozpExecBody');
+  if (tbody) { tbody.innerHTML = ''; _ozpRowCount = 0; }
+  if (!ozp) { _syncOzpFields(); checkOzpButtons(); return; }
+  set('ozpOrg', ozp.org);
   set('ozpPodr', ozp.podr); set('ozpNomer', ozp.nomer); set('ozpDateStart', ozp.dateStart);
+  set('ozpRukovFio', ozp.rukovFio); set('ozpRukovDolzh', ozp.rukovDolzh);
   set('ozpNabludFio', ozp.nabludFio); set('ozpNabludDolzh', ozp.nabludDolzh);
   set('ozpSpasFio', ozp.spasFio); set('ozpSpasDolzh', ozp.spasDolzh);
+  set('ozpMesto', ozp.mesto); set('ozpSoderzhanie', ozp.soderzhanie);
   set('ozpMaterialy', ozp.materialy); set('ozpSvyaz', ozp.svyaz);
+  const condH = document.getElementById('ozpCondHeight'); if (condH) condH.checked = !!ozp.condHeight;
+  const condF = document.getElementById('ozpCondFire'); if (condF) condF.checked = !!ozp.condFire;
   if (ozp.ozpFactors) Object.entries(ozp.ozpFactors).forEach(([i, checked]) => { const el = document.getElementById('ozpFactor' + i); if (el) el.checked = checked; });
   if (ozp.sizValues) Object.entries(ozp.sizValues).forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.value = val; });
+  (ozp.executors || []).forEach(e => addOzpRow(e.fio, e.dolzh, e.razr, e.grEB));
+  _syncOzpFields();
   checkOzpButtons();
 }
 
@@ -7023,6 +7105,43 @@ const OZP_SIZ_ROWS = [
   { id: 'ozpSiz6', label: 'Самоспасатели и системы эвакуации/спасения' },
 ];
 
+// Типовые мероприятия наряда-допуска на работы в ОЗП (фиксированный текст бланка)
+const OZP_PRE_WORK_TASKS = [
+  'Получить наряд-допуск на производство работ у должностного лица, выдающего наряд-допуск, с записью в журнале учёта работ по наряду-допуску.',
+  'Ознакомиться с документированным описанием процедуры управления профессиональными рисками, проектной и технологической документацией, планом мероприятий при аварийной ситуации и при спасении из ОЗП.',
+  'Определить состав звена, назначить ответственного исполнителя, наблюдающего и спасателя.',
+  'Обеспечить нахождение наблюдающего у наружного входа в ОЗП и его контроль за действиями работников.',
+  'Провести осмотр ОЗП, зафиксировать наличие шлама, твёрдого осадка или жидкостей в рабочей зоне с записью в наряде-допуске.',
+  'Внести результаты оценки параметров рабочей среды ОЗП в наряд-допуск.',
+  'Проверить укомплектованность членов бригады инструментом, материалами, средствами защиты, измерения, связи, а также наличие и сроки действия удостоверений о допуске к работам в ОЗП.',
+  'Дать указание ответственному исполнителю по подготовке и приведению в исправность инструментов, материалов, средств защиты, знаков, ограждений.',
+  'Организовать и проконтролировать выполнение технических мероприятий по подготовке рабочего места, наличие и комплектность средств защиты, включая аварийный комплект спасательных и эвакуационных средств.',
+  'Проверять соответствие состава бригады составу, указанному в наряде-допуске.',
+  'Довести до сведения членов бригады информацию о мерах безопасности, провести целевой инструктаж под подпись в наряде-допуске.',
+  'Разъяснить членам бригады порядок производства работ и порядок действий в аварийных и чрезвычайных ситуациях, их права и обязанности.',
+  'Проверить полноту усвоения членами бригады мероприятий по безопасности после целевого инструктажа.',
+  'Организовать и обеспечить выполнение мероприятий по безопасности работ в ОЗП, в том числе необходимость повторного включения вентиляции по результатам мониторинга.',
+  'Допустить бригаду к работе по наряду-допуску непосредственно на месте выполнения работ.',
+];
+
+const OZP_DURING_WORK_TASKS = [
+  { text: 'Обеспечивать принудительный отбор проб газоанализатором в соответствии с требованиями (расположение точки входа, высота отбора, запрет использования газосигнализаторов без индикации концентрации).', who: 'ispoln' },
+  { text: 'Обеспечивать нахождение наблюдающего и спасателя у наружного входа в ОЗП и контроль за действиями работников.', who: 'ispoln' },
+  { text: 'Проверять в присутствии ответственного руководителя работ подготовку рабочих мест, выполнение мер безопасности, наличие у бригады средств защиты, оснастки и инструмента.', who: 'ispoln' },
+  { text: 'Указать каждому члену бригады его рабочее место.', who: 'ispoln' },
+  { text: 'Запрещать членам бригады покидать место производства работ без разрешения ответственного исполнителя, выполнение работ, не предусмотренных нарядом-допуском.', who: 'ispoln' },
+  { text: 'Выводить членов бригады с места производства работ на время перерывов в ходе рабочей смены.', who: 'ispoln' },
+  { text: 'Возобновлять работу бригады после перерыва только после личного осмотра рабочего места.', who: 'ispoln' },
+  { text: 'По окончании работ обеспечить уборку материалов, инструмента, приспособлений, ограждений, мусора и других предметов.', who: 'brigada' },
+  { text: 'Вывести членов бригады с места производства работ по окончании рабочей смены.', who: 'ispoln' },
+  { text: 'Контролировать применение средств коллективной и индивидуальной защиты.', who: 'ispoln' },
+  { text: 'Выполнять только порученную ему работу.', who: 'brigada' },
+  { text: 'Осуществлять непрерывную указанную в наряде-допуске связь (аудио-визуальную) с другими членами бригады и наблюдающим (страхующим).', who: 'ispoln' },
+  { text: 'Уметь профессионально пользоваться оборудованием, инструментом и техническими средствами, обеспечивающими безопасность работников.', who: 'brigada' },
+  { text: 'Лично производить осмотр выданных средств измерений, связи, индивидуальной защиты до и после каждого их использования.', who: 'brigada' },
+  { text: 'Уметь оказывать первую помощь пострадавшим на производстве.', who: 'brigada' },
+];
+
 function _renderOzpFactorsAndSiz() {
   const fGrid = document.getElementById('ozpFactorsGrid');
   if (fGrid && !fGrid.dataset.rendered) {
@@ -7062,17 +7181,18 @@ function switchNaryadType(type) {
     btn.style.background = type === t ? 'var(--navy)' : 'var(--surface)';
     btn.style.color = type === t ? '#fff' : 'var(--navy)';
   });
-  if (type === 'ozp') { _renderOzpFactorsAndSiz(); _syncOzpAutoFields(); _renderOzpFilesList(); checkOzpButtons(); }
+  if (type === 'ozp') { _renderOzpFactorsAndSiz(); _syncOzpFields(); _renderOzpFilesList(); checkOzpButtons(); }
   if (type === 'ognevoy') { _syncOgnevoyReadonlyFields(); updateOgnevoyKindBtns(); }
 }
 
-// Организация и ФИО/должность руководителя — жёстко из профиля авторизованного
-// пользователя, редактирование запрещено (основа для будущей подписки).
-// Место, содержание работ и состав бригады — те же, что и в общестроительном
-// наряде на эту же вкладку, показываются только для чтения.
-function _getGeneralBrigadeRows() {
+// Лист ОЗП полностью независим от общестроительного (кроме кнопки «Подтянуть
+// данные из общестроительного», которая копирует значения один раз, без
+// последующей синхронизации). Организация/ФИО/должность руководителя — либо
+// из профиля авторизованного пользователя (auth-locked, как в Общестрое и
+// Огневом), либо вводятся вручную, если пользователь не авторизован.
+function _getOzpBrigadeRows() {
   const rows = [];
-  document.querySelectorAll('#execBody tr').forEach(tr => {
+  document.querySelectorAll('#ozpExecBody tr').forEach(tr => {
     const c = tr.querySelectorAll('.cell-edit');
     const fio = c[0]?.textContent.trim();
     if (fio) rows.push({ fio, itog: c[1]?.textContent.trim() || '' });
@@ -7080,45 +7200,202 @@ function _getGeneralBrigadeRows() {
   return rows;
 }
 
-function _syncOzpAutoFields() {
-  const activeUser = (currentUser && !currentUser.pending) ? currentUser : null;
-  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-
-  setVal('ozpOrg', activeUser ? toGuillemets(activeUser.org) : '');
-  setVal('ozpRukovFio', activeUser ? activeUser.fio : '');
-  setVal('ozpRukovDolzh', activeUser ? activeUser.dolzh : '');
-
-  setVal('ozpMesto', document.getElementById('mesto')?.value.trim());
-  setVal('ozpSoderzhanie', document.getElementById('vidRabot')?.value.trim());
-
-  const brigada = _getGeneralBrigadeRows();
-  setVal('ozpIspolnFio', brigada[0]?.fio || '');
-  setVal('ozpIspolnDolzh', brigada[0]?.itog || '');
-
-  const list = document.getElementById('ozpBrigadaList');
-  if (list) {
-    list.innerHTML = brigada.length
-      ? brigada.map((b, i) => `<tr><td>${i + 1}</td><td>${b.fio}</td><td>${b.itog || ''}</td></tr>`).join('')
-      : '<tr><td colspan="3" style="color:var(--gray-400);">Бригада пуста — заполните состав исполнителей на общестроительном листе</td></tr>';
-  }
+// Селект + скрытое поле ФИО — единый контрол без визуального дублирования:
+// если ФИО совпадает с кем-то из бригады, селект показывает его и поле ввода
+// скрыто; если нет (ручной ввод) — селект стоит на «вручную», поле ввода видно.
+function _syncOzpFields() {
+  const brigada = _getOzpBrigadeRows();
 
   ['ozpNabludPick', 'ozpSpasPick'].forEach(selId => {
     const sel = document.getElementById(selId);
     if (!sel) return;
-    const prevVal = sel.value;
+    const role = selId === 'ozpNabludPick' ? 'Nablud' : 'Spas';
+    const fioInput = document.getElementById('ozp' + role + 'Fio');
+    const curFio = fioInput.value.trim();
+    const inBrigada = brigada.some(b => b.fio === curFio);
+
     sel.innerHTML = '<option value="">— выбрать из бригады —</option>' +
-      brigada.map(b => `<option value="${b.fio.replace(/"/g, '&quot;')}">${b.fio}</option>`).join('');
-    if (brigada.some(b => b.fio === prevVal)) sel.value = prevVal;
+      brigada.map(b => `<option value="${b.fio.replace(/"/g, '&quot;')}">${b.fio}</option>`).join('') +
+      '<option value="__manual__">— вручную (не из бригады) —</option>';
+    sel.value = curFio ? (inBrigada ? curFio : '__manual__') : '';
+    fioInput.style.display = sel.value === '__manual__' ? '' : 'none';
   });
 }
 
-function _pickOzpRole(role, fio) {
-  if (!fio) return;
-  const brigada = _getGeneralBrigadeRows();
-  const found = brigada.find(b => b.fio === fio);
-  document.getElementById('ozp' + (role === 'nablud' ? 'Nablud' : 'Spas') + 'Fio').value = fio;
-  document.getElementById('ozp' + (role === 'nablud' ? 'Nablud' : 'Spas') + 'Dolzh').value = found?.itog || '';
+function _pickOzpRole(role, val) {
+  const cap = role === 'nablud' ? 'Nablud' : 'Spas';
+  const fioInput = document.getElementById('ozp' + cap + 'Fio');
+  const dolzhInput = document.getElementById('ozp' + cap + 'Dolzh');
+  if (val === '__manual__') {
+    fioInput.style.display = '';
+    fioInput.value = '';
+    dolzhInput.value = '';
+    fioInput.focus();
+  } else if (!val) {
+    fioInput.style.display = 'none';
+    fioInput.value = '';
+    dolzhInput.value = '';
+  } else {
+    fioInput.style.display = 'none';
+    fioInput.value = val;
+    const found = _getOzpBrigadeRows().find(b => b.fio === val);
+    dolzhInput.value = found?.itog || '';
+  }
   checkOzpButtons();
+}
+
+function pullOzpFromGeneral() {
+  const g = id => document.getElementById(id)?.value.trim() || '';
+  document.getElementById('ozpMesto').value = g('mesto');
+  document.getElementById('ozpSoderzhanie').value = g('vidRabot');
+  document.getElementById('ozpDateStart').value = g('dateStart');
+  if (!document.getElementById('ozpRukovFio').value) {
+    document.getElementById('ozpRukovFio').value = g('rukovFio');
+    document.getElementById('ozpRukovDolzh').value = g('rukovDolzh');
+  }
+
+  const tbody = document.getElementById('ozpExecBody');
+  tbody.innerHTML = '';
+  _ozpRowCount = 0;
+  document.querySelectorAll('#execBody tr').forEach(tr => {
+    const c = tr.querySelectorAll('.cell-edit');
+    const fio = c[0]?.textContent.trim();
+    if (fio) addOzpRow(fio, c[1]?.textContent.trim(), c[2]?.textContent.trim(), c[3]?.textContent.trim());
+  });
+  _syncOzpFields();
+  checkOzpButtons();
+}
+
+let _ozpRowCount = 0;
+
+function addOzpRow(fio = '', dolzh = '', razr = '', grEB = '') {
+  _ozpRowCount++;
+  const tbody = document.getElementById('ozpExecBody');
+  const tr = document.createElement('tr');
+  const id = _ozpRowCount;
+  tr.dataset.id = id;
+  const esc = s => (s || '').replace(/</g, '&lt;');
+
+  tr.innerHTML = `
+    <td class="td-drag" draggable="false" title="Перетащить строку">
+      <span class="drag-handle">⠿</span>
+    </td>
+    <td class="td-num">${id}</td>
+    <td class="cell-edit" contenteditable="true" tabindex="0" data-col="0" data-placeholder="Иванов Иван Иванович">${esc(fio)}</td>
+    <td class="cell-edit" contenteditable="true" tabindex="0" data-col="1" data-placeholder="Электромонтажник">${esc(dolzh)}</td>
+    <td class="cell-edit" contenteditable="true" tabindex="0" data-col="2" data-placeholder="5">${esc(razr)}</td>
+    <td class="cell-edit" contenteditable="true" tabindex="0" data-col="3" data-placeholder="2">${esc(grEB)}</td>
+    <td>
+      <button class="btn-del-row" onclick="delOzpRow(this)" title="Удалить строку">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </td>`;
+
+  tbody.appendChild(tr);
+  tr.querySelectorAll('.cell-edit').forEach(td => {
+    td.addEventListener('input', () => { _syncOzpFields(); checkOzpButtons(); scheduleSave(); });
+    td.addEventListener('paste', e => handleOzpCellPaste(e, td));
+    td.addEventListener('keydown', e => handleOzpCellKeydown(e, td));
+  });
+
+  const fioTd = tr.querySelector('[data-col="0"]');
+  fioTd.addEventListener('input',   () => execAcShow(fioTd));
+  fioTd.addEventListener('keydown', e  => execAcKeyDown(e, fioTd));
+  fioTd.addEventListener('blur',    ()  => { setTimeout(execAcHide, 150); });
+  fioTd.addEventListener('blur', () => {
+    if (!syncEnabled) return;
+    const f = fioTd.textContent.trim();
+    if (!f) return;
+    const emp = lookupEmployee(f);
+    if (!emp) return;
+    const cells = tr.querySelectorAll('.cell-edit');
+    cells[1].textContent = emp.dolzh;
+    cells[2].textContent = emp.razr;
+    cells[3].textContent = emp.grEB;
+    _syncOzpFields();
+    checkOzpButtons();
+    scheduleSave();
+  });
+  updateOzpExecCount();
+}
+
+function handleOzpCellPaste(e, td) {
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text');
+  if (!text) return;
+  const gridRows = text.replace(/\r/g, '').split('\n');
+  while (gridRows.length && gridRows[gridRows.length - 1] === '') gridRows.pop();
+  if (!gridRows.length) return;
+
+  const startCol = parseInt(td.dataset.col, 10);
+  let tr = td.closest('tr');
+  gridRows.forEach((rowText, ri) => {
+    if (ri > 0) {
+      let nextTr = tr.nextElementSibling;
+      if (!nextTr) { addOzpRow(); nextTr = tr.nextElementSibling; }
+      tr = nextTr;
+    }
+    const vals = rowText.split('\t');
+    const cells = tr.querySelectorAll('.cell-edit');
+    vals.forEach((v, ci) => {
+      const cell = cells[startCol + ci];
+      if (cell) cell.textContent = v.trim();
+    });
+  });
+  renumberOzpRows();
+  _syncOzpFields();
+  checkOzpButtons();
+  scheduleSave();
+}
+
+function handleOzpCellKeydown(e, td) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const tr = td.closest('tr');
+  const next = tr.nextElementSibling;
+  if (!next) return;
+  const col = parseInt(td.dataset.col, 10);
+  const cells = next.querySelectorAll('.cell-edit');
+  if (cells[col]) cells[col].focus();
+}
+
+function delOzpRow(btn) {
+  btn.closest('tr').remove();
+  renumberOzpRows();
+  _syncOzpFields();
+  checkOzpButtons();
+  scheduleSave();
+}
+
+function renumberOzpRows() {
+  document.querySelectorAll('#ozpExecBody tr').forEach((tr, i) => {
+    tr.querySelector('.td-num').textContent = i + 1;
+  });
+  updateOzpExecCount();
+}
+
+function updateOzpExecCount() {
+  const n = document.querySelectorAll('#ozpExecBody tr').length;
+  const el = document.getElementById('ozpExecCount');
+  if (el) el.textContent = n > 0 ? `Всего: ${n} чел.` : '';
+}
+
+function sortOzpCrewAlpha() {
+  const tbody = document.getElementById('ozpExecBody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  if (rows.length < 3) return; // нечего сортировать
+  const first = rows[0]; // бригадир — не трогаем
+  const rest = rows.slice(1);
+  rest.sort((a, b) => {
+    const fa = (a.querySelector('[data-col="0"]')?.textContent || '').trim();
+    const fb = (b.querySelector('[data-col="0"]')?.textContent || '').trim();
+    return fa.localeCompare(fb, 'ru');
+  });
+  rest.forEach(tr => tbody.appendChild(tr));
+  renumberOzpRows();
+  scheduleSave();
 }
 
 function checkOzpButtons() {
@@ -7126,7 +7403,8 @@ function checkOzpButtons() {
   const nabludFio = g('ozpNabludFio');
   const spasFio = g('ozpSpasFio');
   const rolesClash = nabludFio && spasFio && nabludFio.toLowerCase() === spasFio.toLowerCase();
-  const ready = g('ozpDateStart') && g('ozpRukovFio') && g('ozpIspolnFio') &&
+  const hasBrigada = document.querySelectorAll('#ozpExecBody tr').length > 0;
+  const ready = g('ozpDateStart') && g('ozpRukovFio') && hasBrigada &&
                 nabludFio && spasFio && g('ozpMesto') && g('ozpSoderzhanie') && !rolesClash;
   const btn = document.getElementById('btnOzpDl');
   const placeholder = document.getElementById('ozpDlPlaceholder');
@@ -7143,16 +7421,20 @@ function collectOzpFormData() {
   const g = id => document.getElementById(id)?.value.trim() || '';
   const activeFactors = OZP_FACTORS.filter((_, i) => document.getElementById('ozpFactor' + i)?.checked);
   const sizRows = OZP_SIZ_ROWS.map(row => ({ label: row.label, value: g(row.id) })).filter(r => r.value);
+  const brigada = _getOzpBrigadeRows();
   return {
     org: g('ozpOrg'), podr: g('ozpPodr'), nomer: g('ozpNomer'),
     dateStart: g('ozpDateStart'),
     rukovFio: g('ozpRukovFio'), rukovDolzh: g('ozpRukovDolzh'),
-    ispolnFio: g('ozpIspolnFio'), ispolnDolzh: g('ozpIspolnDolzh'),
+    // Ответственный исполнитель = первый в составе бригады, отдельного поля в UI нет
+    ispolnFio: brigada[0]?.fio || '', ispolnDolzh: brigada[0]?.itog || '',
     nabludFio: g('ozpNabludFio'), nabludDolzh: g('ozpNabludDolzh'),
     spasFio: g('ozpSpasFio'), spasDolzh: g('ozpSpasDolzh'),
     mesto: g('ozpMesto'), soderzhanie: g('ozpSoderzhanie'),
-    brigada: _getGeneralBrigadeRows(),
+    brigada,
     materialy: g('ozpMaterialy'), svyaz: g('ozpSvyaz'),
+    condHeight: !!document.getElementById('ozpCondHeight')?.checked,
+    condFire: !!document.getElementById('ozpCondFire')?.checked,
     activeFactors, sizRows,
   };
 }
@@ -7194,8 +7476,13 @@ async function buildOzpDocument(data) {
     return new TableCell({ borders, width: opts.width ? { size: opts.width, type: WidthType.PERCENTAGE } : undefined,
       children: [p(text, { size: 18, after: 0, ...opts })] });
   }
+  function sectionTitle(text) {
+    return p(text, { bold: true, after: 80 });
+  }
 
   const fmtDate = d => d ? d.split('-').reverse().join('.') : '____________';
+  const ispolnFull = [data.ispolnFio, data.ispolnDolzh].filter(Boolean).join(', ') || '_______________________________';
+  const rukovShort = toInitials ? toInitials(data.rukovFio || '') : (data.rukovFio || '');
 
   const children = [
     p(`НАРЯД-ДОПУСК № ${data.nomer || '_______'}`, { bold: true, size: 28, align: AlignmentType.CENTER }),
@@ -7206,7 +7493,7 @@ async function buildOzpDocument(data) {
     p(`Выдан: «${fmtDate(data.dateStart)}» (действителен на 1 рабочую смену)`, { after: 200 }),
 
     p(`Ответственный руководитель работ: ${[data.rukovFio, data.rukovDolzh].filter(Boolean).join(', ') || '_______________________________'}`),
-    p(`Ответственный исполнитель (производитель) работ: ${[data.ispolnFio, data.ispolnDolzh].filter(Boolean).join(', ') || '_______________________________'}`),
+    p(`Ответственный исполнитель (производитель) работ: ${ispolnFull}`),
     p(`Наблюдающий: ${[data.nabludFio, data.nabludDolzh].filter(Boolean).join(', ') || '_______________________________'}`),
     p(`Спасатель: ${[data.spasFio, data.spasDolzh].filter(Boolean).join(', ') || '_______________________________'}`, { after: 200 }),
 
@@ -7214,29 +7501,30 @@ async function buildOzpDocument(data) {
     p(`Содержание работ: ${data.soderzhanie || '_______________________________'}`, { after: 200 }),
   ];
 
-  children.push(p('Состав исполнителей работ (члены бригады):', { bold: true, after: 80 }));
+  children.push(sectionTitle('Состав исполнителей работ (члены бригады):'));
   if (data.brigada.length) {
     children.push(new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
-        new TableRow({ children: [cell('Ф.И.О.', { bold: true, width: 30 }), cell('Должность', { bold: true, width: 30 }), cell('С условиями работ ознакомлен (подпись)', { bold: true, width: 40 })] }),
-        ...data.brigada.map(b => new TableRow({ children: [cell(b.fio, { width: 30 }), cell(b.itog || '', { width: 30 }), cell('', { width: 40 })] })),
+        new TableRow({ children: [
+          cell('Ф.И.О.', { bold: true, width: 34 }),
+          cell('С условиями работ ознакомил, инструктаж провёл (подпись)', { bold: true, width: 33 }),
+          cell('С условиями работ ознакомлен (подпись)', { bold: true, width: 33 }),
+        ] }),
+        ...data.brigada.map(b => new TableRow({ children: [
+          cell(b.fio, { width: 34 }), cell(rukovShort, { width: 33 }), cell('', { width: 33 }),
+        ] })),
       ],
     }));
   } else {
     children.push(p('_______________________________________________________'));
   }
 
-  children.push(p(' ', { after: 100 }));
-  children.push(p('Опасные и вредные производственные факторы:', { bold: true, after: 80 }));
-  if (data.activeFactors.length) {
-    data.activeFactors.forEach((f, i) => children.push(p(`${i + 1}. ${f}`, { after: 40 })));
-  } else {
-    children.push(p('Не указаны', { after: 40 }));
-  }
+  children.push(p(' ', { after: 60 }));
+  children.push(p(`Начало работ в _____ час _____ мин «${fmtDate(data.dateStart)}» г.`));
+  children.push(p(`Окончание работ в _____ час _____ мин «____________» г.`, { after: 200 }));
 
-  children.push(p(' ', { after: 100 }));
-  children.push(p('Системы обеспечения безопасности работ в ОЗП:', { bold: true, after: 80 }));
+  children.push(sectionTitle('Системы обеспечения безопасности работ в ОЗП:'));
   if (data.sizRows.length) {
     children.push(new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -7247,11 +7535,85 @@ async function buildOzpDocument(data) {
   }
 
   children.push(p(' ', { after: 100 }));
+  children.push(sectionTitle('Опасные и вредные производственные факторы:'));
+  if (data.activeFactors.length) {
+    data.activeFactors.forEach((f, i) => children.push(p(`${i + 1}. ${f}`, { after: 40 })));
+  } else {
+    children.push(p('Не указаны', { after: 40 }));
+  }
+
+  children.push(p(' ', { after: 100 }));
+  children.push(p(`1. Необходимые для производства работ.`, { bold: true, after: 40 }));
   children.push(p(`Материалы и инструменты: ${data.materialy || '_______________________________'}`));
   children.push(p(`Средства связи: ${data.svyaz || '_______________________________'}`, { after: 200 }));
 
-  children.push(p('Наряд-допуск выдал: _______________________ (Ф.И.О., подпись, дата)', { after: 60 }));
-  children.push(p('Разрешение на вход в ОЗП выдал: ____________________________ (Ф.И.О., подпись, дата)', { after: 60 }));
+  function tasksTable(title, tasks, respFn) {
+    children.push(sectionTitle(title));
+    children.push(new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({ children: [
+          cell('№', { bold: true, width: 5, align: AlignmentType.CENTER }),
+          cell('Наименование мероприятия', { bold: true, width: 63 }),
+          cell('Срок выполнения', { bold: true, width: 14 }),
+          cell('Ответственный исполнитель', { bold: true, width: 18 }),
+        ] }),
+        ...tasks.map((t, i) => new TableRow({ children: [
+          cell(String(i + 1), { width: 5, align: AlignmentType.CENTER }),
+          cell(typeof t === 'string' ? t : t.text, { width: 63 }),
+          cell('До начала работ', { width: 14 }),
+          cell(respFn(t), { width: 18 }),
+        ] })),
+      ],
+    }));
+    children.push(p(' ', { after: 100 }));
+  }
+
+  tasksTable('2. До начала производства работ необходимо выполнить следующие мероприятия:',
+    OZP_PRE_WORK_TASKS, () => data.rukovFio || '_________________');
+
+  tasksTable('3. В процессе производства работ необходимо выполнить следующие мероприятия:',
+    OZP_DURING_WORK_TASKS, t => t.who === 'brigada' ? 'Члены бригады' : (data.ispolnFio || '_________________'));
+
+  if (data.condHeight || data.condFire) {
+    children.push(sectionTitle('4. Особые условия проведения работ:'));
+    children.push(new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({ children: [
+          cell('Наименование условий', { bold: true, width: 60 }),
+          cell('Срок выполнения', { bold: true, width: 15 }),
+          cell('Ответственный исполнитель', { bold: true, width: 25 }),
+        ] }),
+        ...(data.condHeight ? [new TableRow({ children: [cell('Работа на высоте', { width: 60 }), cell('Постоянно', { width: 15 }), cell(data.ispolnFio || '_________________', { width: 25 })] })] : []),
+        ...(data.condFire ? [new TableRow({ children: [cell('Огневые работы', { width: 60 }), cell('Постоянно', { width: 15 }), cell(data.ispolnFio || '_________________', { width: 25 })] })] : []),
+      ],
+    }));
+    children.push(p(' ', { after: 100 }));
+  }
+
+  function admissionLogTable(title, headers, widths) {
+    children.push(sectionTitle(title));
+    const rows = [new TableRow({ children: headers.map((h, i) => cell(h, { bold: true, width: widths[i], align: AlignmentType.CENTER })) })];
+    for (let i = 0; i < 6; i++) {
+      rows.push(new TableRow({ children: widths.map(w => cell('', { width: w })) }));
+    }
+    children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows }));
+    children.push(p(' ', { after: 100 }));
+  }
+
+  admissionLogTable(
+    '5. Разрешение на подготовку рабочих мест и на допуск к выполнению работ:',
+    ['Наименование рабочего места', 'Дата, время', 'Подпись ответственного руководителя работ', 'Подпись ответственного исполнителя (производителя) работ'],
+    [30, 15, 27, 28],
+  );
+
+  admissionLogTable(
+    '6. Разрешение на вход в ОЗП после подтверждения соответствующих блокировок:',
+    ['Дата, время', 'Подпись ответственного руководителя работ (выдал)', 'Подпись ответственного исполнителя работ (получил)', 'Работа окончена, бригада удалена (подпись, дата)'],
+    [15, 28, 28, 29],
+  );
+
   children.push(p('Работа выполнена в полном объёме. Материалы, инструмент убраны. Члены бригады выведены.', { after: 60 }));
   children.push(p('Наряд-допуск закрыт: _______________________ (Ф.И.О., подпись, дата)'));
 
@@ -7588,6 +7950,30 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.70', date: '07.07.2026',
+    changes: [
+      'Документ наряда-допуска ОЗП приближен к реальному бланку: добавлены типовые таблицы мероприятий «до начала работ» и «в процессе работ», особые условия (высота/огневые работы) и журналы допуска в ОЗП',
+      'В форму ОЗП добавлен чек-бокс особых условий (высота/огневые работы); время начала/окончания работ в документе по-прежнему заполняется от руки',
+    ]
+  },
+  {
+    version: 'v3.69', date: '07.07.2026',
+    changes: [
+      'ОЗП: убрано дублирование выбора Наблюдающего/Спасателя (выпадающий список из бригады + ручной ввод теперь один контрол, а не два одинаковых поля)',
+      'Выбор Наблюдающего/Спасателя перенесён в Блок 3 к составу бригады, материалы/связь/СИЗ вынесены в отдельный Блок 4',
+      'Убрано отдельное поле «Ответственный исполнитель» — в документе он по-прежнему берётся как первый в бригаде, но больше не дублируется в форме',
+    ]
+  },
+  {
+    version: 'v3.68', date: '07.07.2026',
+    changes: [
+      'Лист ОЗП стал полностью независимой вкладкой — больше не тянет данные с общестроительного листа автоматически',
+      'Добавлена кнопка «Подтянуть данные из общестроительного» (по аналогии с Огневым)',
+      'Организация и ФИО/должность руководителя в ОЗП теперь скрыты для авторизованного пользователя (берутся из профиля) и становятся полем ввода для неавторизованного — как в остальных листах',
+      'Состав бригады, место и содержание работ в ОЗП стали своими полноценными редактируемыми полями с добавлением из базы сотрудников',
+    ]
+  },
   {
     version: 'v3.67', date: '07.07.2026',
     changes: [
