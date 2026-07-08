@@ -990,6 +990,19 @@
   .cpm-add-btn:hover { background: var(--navy); }
   .cpm-add-btn:disabled { opacity: .4; cursor: default; }
 
+  /* ── Пикер вариантов настроек ППРв ── */
+  #pprvOptionPickerOverlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.4); z-index: 800;
+    justify-content: center; align-items: center;
+  }
+  #pprvOptionPickerOverlay.open { display: flex; }
+  #pprvOptionPickerModal {
+    background: var(--surface); width: 420px; max-width: calc(100vw - 24px);
+    border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,.22);
+    display: flex; flex-direction: column; max-height: calc(100vh - 100px); overflow: hidden;
+  }
+
   /* ── Автодополнение исполнителей (ФИО ячейка) ── */
   #execAcList {
     position: fixed; z-index: 600; display: none;
@@ -1207,6 +1220,7 @@
     #rukovPickerOverlay > div,
     #pprPickerOverlay > div,
     #pprvPickerOverlay > div,
+    #pprvOptionPickerOverlay > div,
     #ognevoyUtvPickerOverlay > div,
     #ognevoyRukovPickerOverlay > div { width: 96vw !important; max-width: 96vw !important; }
 
@@ -1381,6 +1395,21 @@
       <button class="ipm-close" onclick="closePprvPicker()">×</button>
     </div>
     <div class="ipm-list" id="pprvPickerList"></div>
+  </div>
+</div>
+
+<!-- Пикер вариантов настроек ППРв -->
+<div id="pprvOptionPickerOverlay" onclick="pprvOptionPickerOverlayClick(event)">
+  <div id="pprvOptionPickerModal">
+    <div class="cpm-header">
+      <h3 id="pprvOptionPickerTitle">Выбор варианта</h3>
+      <button class="cpm-close" onclick="closePprvOptionPicker()">×</button>
+    </div>
+    <div class="cpm-list" id="pprvOptionPickerList"></div>
+    <div class="cpm-footer">
+      <span class="cpm-footer-info" id="pprvOptionSelInfo">Отмечено: 0</span>
+      <button class="cpm-add-btn" onclick="applyPprvOptionPicker()">Применить</button>
+    </div>
   </div>
 </div>
 
@@ -1713,7 +1742,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.77</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.78</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -3270,6 +3299,10 @@ function _buildOrgPprvSettings(headers, rows) {
   renderPprvSettingsFields();
 }
 
+let _pprvOptionValues = {}; // key -> выбранные варианты (для type:'checkbox')
+let _pprvOptionPickerKey = null;
+let _pprvOptionPickerTemp = [];
+
 function renderPprvSettingsFields() {
   const wrap = document.getElementById('pprvSettingsFields');
   if (!wrap) return;
@@ -3281,19 +3314,64 @@ function renderPprvSettingsFields() {
         <input type="text" id="${s.key}" value="${(s.defaultText || '').replace(/"/g, '&quot;')}">
       </div>`;
     }
-    const boxes = s.options.map((opt, i) => {
-      const checked = s.defaultVals.includes(opt) ? 'checked' : '';
-      const id = s.key + '_' + i;
-      return `<label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;margin:4px 0">
-        <input type="checkbox" id="${id}" data-pprv-group="${s.key}" value="${opt.replace(/"/g, '&quot;')}" ${checked}>
-        ${opt}
-      </label>`;
-    }).join('');
+    if (!(s.key in _pprvOptionValues)) _pprvOptionValues[s.key] = s.defaultVals.slice();
     return `<div class="field" style="margin-bottom:14px">
       <label>${s.label}</label>
-      <div>${boxes}</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="${s.key}" readonly value="${_esc(_pprvOptionValues[s.key].join(', '))}" style="flex:1;background:var(--gray-50);cursor:pointer" onclick="openPprvOptionPicker('${s.key}')">
+        <button type="button" class="btn-pick-crew" onclick="openPprvOptionPicker('${s.key}')">☑ Из списка</button>
+      </div>
     </div>`;
   }).join('');
+}
+
+function openPprvOptionPicker(key) {
+  const setting = orgPprvSettings.find(s => s.key === key);
+  if (!setting) return;
+  _pprvOptionPickerKey = key;
+  _pprvOptionPickerTemp = (_pprvOptionValues[key] || []).slice();
+  document.getElementById('pprvOptionPickerTitle').textContent = setting.label;
+  renderPprvOptionPickerList();
+  document.getElementById('pprvOptionPickerOverlay').classList.add('open');
+}
+
+function renderPprvOptionPickerList() {
+  const setting = orgPprvSettings.find(s => s.key === _pprvOptionPickerKey);
+  const list = document.getElementById('pprvOptionPickerList');
+  if (!setting || !list) return;
+  list.innerHTML = setting.options.map((opt, i) => {
+    const checked = _pprvOptionPickerTemp.includes(opt) ? 'checked' : '';
+    const optE = opt.replace(/"/g, '&quot;');
+    return `<label class="cpm-item" for="pprvOpt_${i}">
+      <input class="cpm-cb" type="checkbox" id="pprvOpt_${i}" value="${optE}" ${checked} onchange="togglePprvOptionTemp('${optE}', this.checked)">
+      <div class="cpm-info"><div class="cpm-fio">${opt}</div></div>
+    </label>`;
+  }).join('');
+  document.getElementById('pprvOptionSelInfo').textContent = `Отмечено: ${_pprvOptionPickerTemp.length}`;
+}
+
+function togglePprvOptionTemp(opt, isChecked) {
+  const idx = _pprvOptionPickerTemp.indexOf(opt);
+  if (isChecked && idx < 0) _pprvOptionPickerTemp.push(opt);
+  if (!isChecked && idx >= 0) _pprvOptionPickerTemp.splice(idx, 1);
+  document.getElementById('pprvOptionSelInfo').textContent = `Отмечено: ${_pprvOptionPickerTemp.length}`;
+}
+
+function applyPprvOptionPicker() {
+  if (!_pprvOptionPickerKey) return;
+  _pprvOptionValues[_pprvOptionPickerKey] = _pprvOptionPickerTemp.slice();
+  const input = document.getElementById(_pprvOptionPickerKey);
+  if (input) input.value = _pprvOptionPickerTemp.join(', ');
+  closePprvOptionPicker();
+}
+
+function closePprvOptionPicker() {
+  document.getElementById('pprvOptionPickerOverlay').classList.remove('open');
+  _pprvOptionPickerKey = null;
+}
+
+function pprvOptionPickerOverlayClick(e) {
+  if (e.target === document.getElementById('pprvOptionPickerOverlay')) closePprvOptionPicker();
 }
 
 function collectPprvSettingsData() {
@@ -3303,8 +3381,7 @@ function collectPprvSettingsData() {
       const el = document.getElementById(s.key);
       result[s.label.toLowerCase()] = el ? el.value.trim() : (s.defaultText || '');
     } else {
-      const checked = Array.from(document.querySelectorAll(`input[data-pprv-group="${s.key}"]:checked`)).map(el => el.value);
-      result[s.label.toLowerCase()] = checked.join(', ');
+      result[s.label.toLowerCase()] = (_pprvOptionValues[s.key] || []).join(', ');
     }
   });
   return result;
@@ -5699,7 +5776,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.77';
+const CURRENT_VERSION = 'v3.78';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -8170,6 +8247,12 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.78', date: '08.07.2026',
+    changes: [
+      'Настройки ППРв с несколькими вариантами теперь скрыты за кнопкой «Из списка» (как остальные пикеры), а не показаны все сразу списком чекбоксов',
+    ]
+  },
   {
     version: 'v3.77', date: '08.07.2026',
     changes: [
