@@ -1742,7 +1742,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.78</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.79</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1968,6 +1968,10 @@
           </div>
           <div id="pprvSettingsBody" style="display:none;padding:14px 2px 2px">
             <div id="pprvSettingsFields"></div>
+            <button type="button" class="issuer-pick-btn" onclick="togglePprvSettingsBlock()" style="width:auto;padding:0 16px;margin-top:4px">
+              <span style="display:inline-block;transform:rotate(180deg)">▸</span>
+              Свернуть
+            </button>
           </div>
         </div>
 
@@ -3317,9 +3321,12 @@ function renderPprvSettingsFields() {
     if (!(s.key in _pprvOptionValues)) _pprvOptionValues[s.key] = s.defaultVals.slice();
     return `<div class="field" style="margin-bottom:14px">
       <label>${s.label}</label>
-      <div style="display:flex;gap:8px">
-        <input type="text" id="${s.key}" readonly value="${_esc(_pprvOptionValues[s.key].join(', '))}" style="flex:1;background:var(--gray-50);cursor:pointer" onclick="openPprvOptionPicker('${s.key}')">
-        <button type="button" class="btn-pick-crew" onclick="openPprvOptionPicker('${s.key}')">☑ Из списка</button>
+      <div style="display:flex;gap:6px;align-items:stretch">
+        <input type="text" id="${s.key}" readonly value="${_esc(_pprvOptionValues[s.key].join(', '))}" style="flex:1;min-width:0;background:var(--gray-50);cursor:pointer" onclick="openPprvOptionPicker('${s.key}')">
+        <button type="button" class="issuer-pick-btn" onclick="openPprvOptionPicker('${s.key}')" title="Выбрать варианты из списка">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Из списка
+        </button>
       </div>
     </div>`;
   }).join('');
@@ -5776,7 +5783,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.78';
+const CURRENT_VERSION = 'v3.79';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -8247,6 +8254,13 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.79', date: '08.07.2026',
+    changes: [
+      'Кнопка «Из списка» в настройках ППРв приведена к общему стилю остальных пикеров',
+      'В раскрытом блоке «Настройки ППРв» добавлена кнопка «Свернуть»',
+    ]
+  },
   {
     version: 'v3.78', date: '08.07.2026',
     changes: [
