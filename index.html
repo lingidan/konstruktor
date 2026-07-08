@@ -508,6 +508,20 @@
   .btn-undo-redo:hover:not(:disabled) { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
   .btn-undo-redo:disabled { opacity: .35; cursor: default; }
 
+  /* ── Кнопка «Обновить данные» ── */
+  #btnRefreshData {
+    display: flex; align-items: center; gap: 7px;
+    margin-left: 8px;
+    padding: 9px 16px; background: var(--surface);
+    border: 1.5px solid var(--gray-200); border-radius: 20px;
+    font-size: 13px; font-weight: 600; color: var(--text);
+    cursor: pointer; box-shadow: var(--shadow-sm);
+    transition: background .15s, border-color .15s;
+    white-space: nowrap;
+  }
+  #btnRefreshData:hover:not(:disabled) { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+  #btnRefreshData:disabled { opacity: .6; cursor: default; }
+
   /* ── Модал инструкции ── */
   #guideOverlay {
     display: none; position: fixed; inset: 0;
@@ -1679,6 +1693,11 @@
   <button class="btn-undo-redo" id="btnRedo" onclick="redoAction()" title="Вернуть (Ctrl+Y)" disabled>
     <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 7v6h-6"/><path d="M21 13C18.8 8.4 14.2 5 9 5a9 9 0 1 0 0 18c4.2 0 7.8-2.3 9.7-5.7"/></svg>
   </button>
+  <!-- Кнопка принудительного обновления данных (база сотрудников и т.п.) -->
+  <button id="btnRefreshData" onclick="forceRefreshPersonnel(this)" style="display:none" title="Загрузить актуальные данные из таблицы, не дожидаясь автообновления">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+    Обновить данные
+  </button>
 </div>
 
 <div class="page-header">
@@ -1694,7 +1713,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.75</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.76</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1716,11 +1735,6 @@
       </div>
     </div>
   </div>
-  <!-- Кнопка принудительного обновления данных (база сотрудников и т.п.) -->
-  <button id="btnRefreshData" onclick="forceRefreshPersonnel(this)" style="display:none" title="Загрузить актуальные данные из таблицы, не дожидаясь автообновления">
-    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-    Обновить данные
-  </button>
   <!-- Кнопка Инструкция -->
   <button id="btnGuide" onclick="openGuide()">
     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -5685,7 +5699,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.75';
+const CURRENT_VERSION = 'v3.76';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -8156,6 +8170,12 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.76', date: '08.07.2026',
+    changes: [
+      'Кнопка «Обновить данные» перенесена в левый верхний угол и приведена к общему стилю остальных кнопок шапки',
+    ]
+  },
   {
     version: 'v3.75', date: '08.07.2026',
     changes: [
