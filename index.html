@@ -849,7 +849,7 @@
   #issuerPickerOverlay, #rukovPickerOverlay, #pprvPickerOverlay, #ognevoyUtvPickerOverlay, #ognevoyRukovPickerOverlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,.4); z-index: 800;
-    justify-content: center; align-items: flex-start; padding-top: 60px;
+    justify-content: center; align-items: center;
   }
   #issuerPickerOverlay.open, #rukovPickerOverlay.open, #pprvPickerOverlay.open, #ognevoyUtvPickerOverlay.open, #ognevoyRukovPickerOverlay.open { display: flex; }
   #issuerPickerModal, #rukovPickerModal, #pprvPickerModal, #ognevoyUtvPickerModal, #ognevoyRukovPickerModal {
@@ -1713,7 +1713,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.76</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.77</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -5699,7 +5699,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.76';
+const CURRENT_VERSION = 'v3.77';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -8170,6 +8170,12 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.77', date: '08.07.2026',
+    changes: [
+      'Окна выбора утвердившего/руководителя теперь открываются по центру экрана, а не под шапкой',
+    ]
+  },
   {
     version: 'v3.76', date: '08.07.2026',
     changes: [
