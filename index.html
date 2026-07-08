@@ -1694,7 +1694,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.70</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.71</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2782,6 +2782,21 @@ function closeLoginModal() {
 }
 
 function loginOverlayClick(e) {
+}
+
+// Токен сессии оказался недействителен/просрочен (напр. истёк за 30 дней,
+// либо сессия сохранена ещё до введения токенов) — сервер вернул 'forbidden'.
+// Без пароля молча обновить токен нельзя, поэтому разлогиниваем и сразу
+// открываем форму входа с понятным сообщением вместо непонятной ошибки
+// "нет данных в базе".
+function _forceReloginSessionExpired() {
+  const prevLogin = currentUser ? currentUser.login : '';
+  logout();
+  openLoginModal('login');
+  if (prevLogin) document.getElementById('lmLogin').value = prevLogin;
+  const err = document.getElementById('lmError');
+  err.textContent = 'Сессия устарела, войдите заново';
+  err.style.display = 'block';
 }
 
 function switchAuthTab(tab) {
@@ -4648,6 +4663,7 @@ function loadOrgPersonnel() {
   async function _fetchWithRetry(attemptsLeft) {
     try {
       const data = await _apiCall({ action: 'getOrgPersonnel', token: _authToken() });
+      if (data.error === 'forbidden') { _forceReloginSessionExpired(); return; }
       if (!data.ok || !data.rows || data.rows.length < 1) throw new Error('empty');
       // Успех — сохраняем в оба кэша
       try { sessionStorage.setItem(_ssKey, JSON.stringify(data)); } catch(e) {}
@@ -5479,7 +5495,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.70';
+const CURRENT_VERSION = 'v3.71';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -7950,6 +7966,12 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.71', date: '08.07.2026',
+    changes: [
+      'Исправлена ошибка «в базе данных нет информации» у ранее авторизованных пользователей — при устаревшей/недействительной сессии теперь сразу предлагается войти заново, вместо тихого зависания',
+    ]
+  },
   {
     version: 'v3.70', date: '07.07.2026',
     changes: [
@@ -10690,6 +10712,7 @@ document.addEventListener('wheel', e => {
       (async () => {
         try {
           const data = await _apiCall({ action: 'refreshUserData', token: _authToken() });
+          if (data.error === 'forbidden') { _forceReloginSessionExpired(); return; }
           if (!data.ok || !data.found) return;
           const fresh = data.user;
           if (data.token) localStorage.setItem('auth_token', data.token);
