@@ -3242,9 +3242,14 @@ function togglePprvSettingsBlock() {
   const arrow = document.getElementById('pprvSettingsArrow');
   if (!body) return;
   const open = body.style.display !== 'none';
+  const heightBefore = body.offsetHeight;
   body.style.display = open ? 'none' : '';
   if (arrow) arrow.style.transform = open ? '' : 'rotate(90deg)';
-  if (!open) loadPprvSettingsIfNeeded();
+  if (open) {
+    window.scrollBy(0, -heightBefore);
+  } else {
+    loadPprvSettingsIfNeeded();
+  }
 }
 
 // Ленивая подгрузка настроек ППРв — отдельный запрос к серверу, дергается
