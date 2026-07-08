@@ -1694,7 +1694,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.71</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.72</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1909,6 +1909,17 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               Из списка
             </button>
+          </div>
+        </div>
+
+        <div class="field col-span-2" id="pprvSettingsBlock" style="display:none">
+          <div id="pprvSettingsHeader" onclick="togglePprvSettingsBlock()" style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;padding:10px 14px;background:var(--gray-100,#f1f5f9);border:1.5px solid var(--gray-200);border-radius:var(--radius)">
+            <span id="pprvSettingsArrow" style="transition:transform .15s;display:inline-block">▸</span>
+            <span style="font-weight:600;font-size:14px">Настройки ППРв</span>
+            <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(тестовая функция — админ)</span>
+          </div>
+          <div id="pprvSettingsBody" style="display:none;padding:14px 2px 2px">
+            <div id="pprvSettingsFields"></div>
           </div>
         </div>
 
@@ -2695,6 +2706,7 @@ function collectFormData() {
     rukovFio:    document.getElementById('rukovFio').value.trim(),
     rukov:       [document.getElementById('rukovDolzh').value.trim(), document.getElementById('rukovFio').value.trim()].filter(Boolean).join(' '),
     utvPprv:     document.getElementById('utvPprv').value.trim(),
+    pprvSettings: collectPprvSettingsData(),
     soglasov:    orgDangers.some(f => f.name.toLowerCase().includes('земл') && document.getElementById(f.id)?.checked) ? '' : 'Не требуется',
     mesto:       document.getElementById('mesto').value.trim(),
     vidRabot:    document.getElementById('vidRabot').value.trim(),
@@ -2742,6 +2754,7 @@ let receiversList = [];    // [{fio, dolzh, ppu}] — те, за кого Опе
 let pprvApproversList = []; // [{fio, dolzh}] — те, кто утверждает ППРв ("ппрв" в столбце «Рабочие обозначения»)
 let orgPprData = [];       // [{blok, obj, nom, hdr}] — реестр ППР
 let _pprSelectedNom = null; // текущий выбранный номер ППР в пикере
+let orgPprvSettings = [];  // [{key, label, type:'text'|'checkbox', defaultText, options, defaultVals}] — настройки ППРв из колонок «ППРв - ...»
 
 // Состояние загрузки базы сотрудников: 'idle' | 'loading' | 'ready' | 'error'
 let _personnelStatus = 'idle';
@@ -3156,12 +3169,65 @@ function _showAdminBtn() {
     if (!isAdmin && _naryadType === 'ozp') switchNaryadType('general');
   }
 
+  // Блок «Настройки ППРв» — тестовая функция, видна только администратору
+  const pprvBlock = document.getElementById('pprvSettingsBlock');
+  if (pprvBlock) pprvBlock.style.display = isAdmin ? '' : 'none';
+
   // Огневой наряд формируется на отдельной вкладке «Огневой» —
   // старая кнопка/поле на общестроительном листе для него больше не нужны.
   const ognField = document.getElementById('nomerOgnField');
   const ognBtn = document.getElementById('btnOgnev');
   if (ognField) ognField.style.display = showSwitch ? 'none' : '';
   if (ognBtn) ognBtn.style.display = showSwitch ? 'none' : '';
+}
+
+function togglePprvSettingsBlock() {
+  const body  = document.getElementById('pprvSettingsBody');
+  const arrow = document.getElementById('pprvSettingsArrow');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  if (arrow) arrow.style.transform = open ? '' : 'rotate(90deg)';
+}
+
+function renderPprvSettingsFields() {
+  const wrap = document.getElementById('pprvSettingsFields');
+  if (!wrap) return;
+  if (!orgPprvSettings.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = orgPprvSettings.map(s => {
+    if (s.type === 'text') {
+      return `<div class="field" style="margin-bottom:14px">
+        <label>${s.label}</label>
+        <input type="text" id="${s.key}" value="${(s.defaultText || '').replace(/"/g, '&quot;')}">
+      </div>`;
+    }
+    const boxes = s.options.map((opt, i) => {
+      const checked = s.defaultVals.includes(opt) ? 'checked' : '';
+      const id = s.key + '_' + i;
+      return `<label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;margin:4px 0">
+        <input type="checkbox" id="${id}" data-pprv-group="${s.key}" value="${opt.replace(/"/g, '&quot;')}" ${checked}>
+        ${opt}
+      </label>`;
+    }).join('');
+    return `<div class="field" style="margin-bottom:14px">
+      <label>${s.label}</label>
+      <div>${boxes}</div>
+    </div>`;
+  }).join('');
+}
+
+function collectPprvSettingsData() {
+  const result = {};
+  orgPprvSettings.forEach(s => {
+    if (s.type === 'text') {
+      const el = document.getElementById(s.key);
+      result[s.label.toLowerCase()] = el ? el.value.trim() : (s.defaultText || '');
+    } else {
+      const checked = Array.from(document.querySelectorAll(`input[data-pprv-group="${s.key}"]:checked`)).map(el => el.value);
+      result[s.label.toLowerCase()] = checked.join(', ');
+    }
+  });
+  return result;
 }
 
 async function _refreshAdminBadge() {
@@ -4472,6 +4538,8 @@ function _resetOrgPersonnelData() {
   orgWorkTypes = [];
   orgApplicationTypes = [];
   orgPprData = [];
+  orgPprvSettings = [];
+  renderPprvSettingsFields();
   rebuildIssuerPpuFilter();
   rebuildIssuerPpuFilter('ognevoyUtvPpuFilter');
   rebuildCrewPpuFilter();
@@ -4616,6 +4684,40 @@ function loadOrgPersonnel() {
           if (!_seenPpr.has(key)) { _seenPpr.add(key); orgPprData.push({ blok, obj, nom, hdr }); }
         }
       }
+
+      // Настройки ППРв: колонки «ППРв - <название>» (Анкерные устройства, Привязи,
+      // Вид стропов, ограждения, знаки безопасности и т.д.). Каждая колонка — свой
+      // пункт. Если во всех строках колонки встречается только один уникальный
+      // вариант — обычное текстовое поле со значением из строки 2 (первая строка
+      // данных). Если несколько разных вариантов — чекбоксы (варианты — объединение
+      // значений всех строк, разбитых по запятой/точке с запятой), по умолчанию
+      // отмечены варианты из строки 2 (тоже разбитые по запятой/точке с запятой).
+      orgPprvSettings = [];
+      for (let idx = 0; idx < hdrs.length; idx++) {
+        const hLower = hdrs[idx].trim();
+        if (!hLower.startsWith('ппрв')) continue;
+        const rawLabel = (data.headers[idx] || '').trim();
+        const label = rawLabel.replace(/^ппрв/i, '').replace(/^[\s-]+/, '').trim() || rawLabel;
+        const optSet = [];
+        const seenOpt = new Set();
+        for (let i = 0; i < rows.length; i++) {
+          const cellVal = (rows[i][idx] || '').trim();
+          if (!cellVal) continue;
+          cellVal.split(/[,;]+/).map(s => s.trim()).filter(Boolean).forEach(part => {
+            if (!seenOpt.has(part)) { seenOpt.add(part); optSet.push(part); }
+          });
+        }
+        if (!optSet.length) continue;
+        const firstRowVal = (rows[0][idx] || '').trim();
+        const key = 'pprvSet_' + idx;
+        if (optSet.length === 1) {
+          orgPprvSettings.push({ key, label, type: 'text', defaultText: firstRowVal });
+        } else {
+          const defaultVals = firstRowVal.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+          orgPprvSettings.push({ key, label, type: 'checkbox', options: optSet, defaultVals });
+        }
+      }
+      renderPprvSettingsFields();
 
       // Определить участок текущего пользователя
       if (currentUser) {
@@ -5343,6 +5445,16 @@ async function buildPPRVDocument(data) {
     ] });
   }
 
+  // Значения из блока «Настройки ППРв» (если админ их настроил) переопределяют
+  // жёстко зашитые значения по умолчанию ниже. Сопоставление — по вхождению
+  // подстроки в название колонки листа (регистр не важен).
+  const pprvSet = data.pprvSettings || {};
+  function pprvVal(matchSubstr, fallback) {
+    const found = Object.keys(pprvSet).find(k => k.includes(matchSubstr));
+    const val = found ? pprvSet[found] : '';
+    return val || fallback;
+  }
+
   const execLead = (data.executors[0] && data.executors[0].fio) || '';
   const execLeadDolzh = (data.executors[0] && data.executors[0].dolzh) || '';
   const hasWelder = data.executors.some(e => /электрогазосварщик|электросварщик/i.test(e.dolzh || ''));
@@ -5378,22 +5490,22 @@ async function buildPPRVDocument(data) {
       infoRow('Технологическая документация:', data.ppr),
       infoRow('Требования к исполнителям:', trebLines),
       subHeaderRow('Системы обеспечения безопасности работ на высоте:'),
-      infoRow('Анкерные устройства:', 'Надежные металлоконструкции'),
-      infoRow('Привязи:', privyaz),
-      infoRow('Вид стропов:', strop),
+      infoRow('Анкерные устройства:', pprvVal('анкерные устройств', 'Надежные металлоконструкции')),
+      infoRow('Привязи:', pprvVal('привязи', privyaz)),
+      infoRow('Вид стропов:', pprvVal('вид стропов', strop)),
       subHeaderRow('Необходимо оградить:-'),
-      infoRow('Сигнальные ограждения:', 'выгородить рабочую зону сигнальной лентой'),
-      infoRow('Защитные ограждения:', 'Не требуются'),
-      infoRow('Знаки безопасности:', '«Доступ посторонним запрещен»'),
-      infoRow('Средства коллективной защиты:', 'защитное ограждение'),
-      infoRow('Средства подмащивания (при необходимости):', 'лестница стремянка, вышка туры'),
-      infoRow('Грузоподъёмные механизмы:', 'НЕТ'),
-      infoRow('Проемы в зоне производства работ:', 'отсутствуют'),
-      infoRow('Пути и средства подъема на высоту (при необходимости):', 'лестница стремянка, вышка туры, платформа (подмость)'),
-      infoRow('Средства освещения, сигнализации (при необходимости) и связи:', 'Искусственное освещение, Мобильный телефон 8(919)130-54-74'),
-      infoRow('Применение технических средств безопасности и первичных средств пожаротушения:', '2 огнетушителя ОП-5, огнеупорное полотно (установленных на рабочем месте)'),
-      infoRow('Санитарно-бытовое обслуживание работников:', 'Аптечка первой помощи находится на рабочем месте'),
-      infoRow('Дополнительные мероприятия, выполняемые при совмещенных работах, при работах в условиях действующего производства:', 'отсутствуют'),
+      infoRow('Сигнальные ограждения:', pprvVal('сигнальные огражд', 'выгородить рабочую зону сигнальной лентой')),
+      infoRow('Защитные ограждения:', pprvVal('защитные огражд', 'Не требуются')),
+      infoRow('Знаки безопасности:', pprvVal('знаки безопасности', '«Доступ посторонним запрещен»')),
+      infoRow('Средства коллективной защиты:', pprvVal('средства коллектив', 'защитное ограждение')),
+      infoRow('Средства подмащивания (при необходимости):', pprvVal('средства подмащ', 'лестница стремянка, вышка туры')),
+      infoRow('Грузоподъёмные механизмы:', pprvVal('грузоподъ', 'НЕТ')),
+      infoRow('Проемы в зоне производства работ:', pprvVal('проемы в зоне', pprvVal('проёмы в зоне', 'отсутствуют'))),
+      infoRow('Пути и средства подъема на высоту (при необходимости):', pprvVal('пути и средства подъема', 'лестница стремянка, вышка туры, платформа (подмость)')),
+      infoRow('Средства освещения, сигнализации (при необходимости) и связи:', pprvVal('средства освещения', 'Искусственное освещение, Мобильный телефон 8(919)130-54-74')),
+      infoRow('Применение технических средств безопасности и первичных средств пожаротушения:', pprvVal('применение техническ', '2 огнетушителя ОП-5, огнеупорное полотно (установленных на рабочем месте)')),
+      infoRow('Санитарно-бытовое обслуживание работников:', pprvVal('санитарно-быт', 'Аптечка первой помощи находится на рабочем месте')),
+      infoRow('Дополнительные мероприятия, выполняемые при совмещенных работах, при работах в условиях действующего производства:', pprvVal('дополнительные мероприятия', 'отсутствуют')),
       infoRowWithSig('Лицо, выдающее наряд-допуск:', [data.naradVydalDolzh, toInitials(data.naradVydalFio)].filter(Boolean).join(' ')),
       infoRowWithSig('Руководитель работ:', [data.rukovDolzh, toInitials(data.rukovFio)].filter(Boolean).join(' ')),
       infoRowWithSig('Исполнитель работ:', toInitials(execLead), execLeadDolzh)
@@ -5495,7 +5607,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.71';
+const CURRENT_VERSION = 'v3.72';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -7966,6 +8078,12 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.72', date: '08.07.2026',
+    changes: [
+      'Добавлен свёрнутый блок «Настройки ППРв» (только для администратора) с настройкой анкерных устройств, привязей, ограждений, знаков безопасности и других пунктов документа ППРв по данным реестра организации',
+    ]
+  },
   {
     version: 'v3.71', date: '08.07.2026',
     changes: [
