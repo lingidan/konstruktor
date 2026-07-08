@@ -1694,7 +1694,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.73</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.75</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1716,6 +1716,11 @@
       </div>
     </div>
   </div>
+  <!-- Кнопка принудительного обновления данных (база сотрудников и т.п.) -->
+  <button id="btnRefreshData" onclick="forceRefreshPersonnel(this)" style="display:none" title="Загрузить актуальные данные из таблицы, не дожидаясь автообновления">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+    Обновить данные
+  </button>
   <!-- Кнопка Инструкция -->
   <button id="btnGuide" onclick="openGuide()">
     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -2931,6 +2936,9 @@ function updateAuthButton() {
 
   const syncBtn = document.getElementById('btnSyncB3');
   if (syncBtn) syncBtn.style.display = currentUser ? 'none' : '';
+
+  const refreshBtn = document.getElementById('btnRefreshData');
+  if (refreshBtn) refreshBtn.style.display = (currentUser && !currentUser.pending) ? '' : 'none';
 
   if (currentUser) {
     const parts = currentUser.fio.trim().split(/\s+/);
@@ -4787,14 +4795,31 @@ function loadOrgPersonnel() {
       _personnelNotifyPending(true);
   };
 
-  const _ssKeyLs = 'personnel_cache_' + org; // localStorage-ключ для резервного кэша
+  const _ssKeyLs = 'personnel_cache_' + org; // localStorage-ключ кэша (переживает перезагрузку страницы)
 
-  const _cached = sessionStorage.getItem(_ssKey);
-  if (_cached) {
-    try { _doLoad(JSON.parse(_cached)); return; } catch(e) {}
+  // Stale-while-revalidate: сразу применяем то, что уже есть в кэше (без
+  // ожидания сети) — раньше сайт при каждой перезагрузке игнорировал готовый
+  // кэш и ждал ответа от Apps Script (который может «просыпаться» до 9 сек
+  // при cold start), хотя рядом лежали рабочие данные. Теперь показываем их
+  // мгновенно, а актуальные данные подтягиваем в фоне и тихо подменяем.
+  let _appliedFromCache = false;
+  try {
+    const _lsRaw = localStorage.getItem(_ssKeyLs);
+    if (_lsRaw) {
+      const _ls = JSON.parse(_lsRaw);
+      if (_ls && _ls.data) { _doLoad(_ls.data); _appliedFromCache = true; }
+    }
+  } catch(e) {}
+  if (!_appliedFromCache) {
+    const _cached = sessionStorage.getItem(_ssKey);
+    if (_cached) {
+      try { _doLoad(JSON.parse(_cached)); _appliedFromCache = true; } catch(e) {}
+    }
   }
 
-  // Retry-логика: до 3 попыток с паузой 3 сек (решает cold start Google Apps Script)
+  // Retry-логика: до 3 попыток с паузой 3 сек (решает cold start Google Apps Script).
+  // Идёт всегда, даже если данные уже показаны из кэша — чтобы не разъезжаться
+  // с таблицей надолго.
   async function _fetchWithRetry(attemptsLeft) {
     try {
       const data = await _apiCall({ action: 'getOrgPersonnel', token: _authToken() });
@@ -4810,19 +4835,9 @@ function loadOrgPersonnel() {
       if (attemptsLeft > 1) {
         console.warn('Повтор загрузки базы сотрудников через 3 сек, осталось попыток:', attemptsLeft - 1);
         setTimeout(() => _fetchWithRetry(attemptsLeft - 1), 3000);
+      } else if (_appliedFromCache) {
+        console.warn('Не удалось обновить базу сотрудников в фоне — работаем с ранее закэшированными данными');
       } else {
-        // Все попытки исчерпаны — пробуем резервный кэш из localStorage (до 24 ч)
-        try {
-          const _lsRaw = localStorage.getItem(_ssKeyLs);
-          if (_lsRaw) {
-            const _ls = JSON.parse(_lsRaw);
-            if (_ls && _ls.data && (Date.now() - _ls.ts) < 86400000) {
-              console.warn('Используем резервный кэш базы сотрудников (данные могут быть устаревшими)');
-              _doLoad(_ls.data);
-              return;
-            }
-          }
-        } catch(e) {}
         console.warn('Не удалось загрузить сотрудников организации:', org);
         _resetOrgPersonnelData();
         // Уведомляем всех ожидающих: загрузка не удалась
@@ -4833,6 +4848,36 @@ function loadOrgPersonnel() {
   }
 
   _fetchWithRetry(3);
+}
+
+// Принудительное обновление данных по кнопке — стирает клиентский кэш и
+// просит сервер тоже пропустить свой 2-минутный кэш (force: true), чтобы
+// пользователь мог сразу получить то, что только что поменяли в таблице,
+// не дожидаясь автообновления в фоне.
+async function forceRefreshPersonnel(btn) {
+  if (!currentUser || btn.disabled) return;
+  const org = currentUser.org;
+  localStorage.removeItem('personnel_cache_' + org);
+  sessionStorage.removeItem('session_personnel_' + org);
+  _pprvSettingsStatus = 'idle';
+
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Обновление…';
+  try {
+    const data = await _apiCall({ action: 'getOrgPersonnel', token: _authToken(), force: true });
+    if (data.error === 'forbidden') { _forceReloginSessionExpired(); return; }
+    if (!data.ok || !data.rows || data.rows.length < 1) throw new Error('empty');
+    try { sessionStorage.setItem('session_personnel_' + org, JSON.stringify(data)); } catch(e) {}
+    try { localStorage.setItem('personnel_cache_' + org, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+    loadOrgPersonnel();
+    btn.innerHTML = '✓ Обновлено';
+  } catch (e) {
+    console.warn('Не удалось принудительно обновить данные:', e);
+    btn.innerHTML = '⚠ Не удалось обновить';
+  } finally {
+    setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 1800);
+  }
 }
 
 function syncAllRows() {
@@ -5640,7 +5685,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.73';
+const CURRENT_VERSION = 'v3.75';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -8111,6 +8156,18 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.75', date: '08.07.2026',
+    changes: [
+      'Добавлена кнопка «Обновить данные» в шапке (видна авторизованным) — принудительно подтягивает свежие данные из таблицы организации, не дожидаясь автообновления в фоне',
+    ]
+  },
+  {
+    version: 'v3.74', date: '08.07.2026',
+    changes: [
+      'Устранена главная причина долгой загрузки при входе: раньше сайт при каждом открытии игнорировал уже сохранённые данные сотрудников и ждал ответа сервера заново (до 9 секунд при «холодном старте»). Теперь сохранённые данные показываются мгновенно, а актуальные — тихо подгружаются следом',
+    ]
+  },
   {
     version: 'v3.73', date: '08.07.2026',
     changes: [
