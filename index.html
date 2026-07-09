@@ -3,53 +3,100 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="refresh" content="0; url=http://lingidan.konstruktor.website.yandexcloud.net/">
 <title>Конструктор — сайт переехал</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231a3a5c'/%3E%3Cpath d='M9 6h9l6 6v14a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z' fill='%23ffffff' opacity='.15'/%3E%3Cpath d='M10 7h8.5L23 11.5V25H10V7z' fill='white'/%3E%3Cpath d='M18.5 7v4.5H23' fill='none' stroke='%231a3a5c' stroke-width='1.2'/%3E%3Cpath d='M13 16.5l2 2 4-4' stroke='%231a3a5c' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
 <style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #1a3a5c;
+    --navy-light: #234d78;
+    --navy-dark: #122840;
+    --accent: #2e7abf;
+    --accent-light: #e8f2fa;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
   body {
-    margin: 0;
-    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #0f172a;
-    color: #e2e8f0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    text-align: center;
+    background: linear-gradient(160deg, var(--navy) 0%, var(--navy-dark) 100%);
+    color: white;
     padding: 24px;
-    box-sizing: border-box;
   }
+
   .card {
-    max-width: 480px;
+    max-width: 460px;
+    width: 100%;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 16px;
+    padding: 40px 32px;
+    text-align: center;
+    backdrop-filter: blur(6px);
   }
+
+  .logo {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 20px;
+    display: block;
+  }
+
   h1 {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     margin-bottom: 12px;
+    color: white;
   }
+
   p {
-    line-height: 1.5;
-    color: #94a3b8;
+    line-height: 1.6;
+    color: rgba(255,255,255,.75);
+    font-size: 0.95rem;
+    margin-bottom: 28px;
   }
-  a {
+
+  a.btn {
     display: inline-block;
-    margin-top: 20px;
-    padding: 12px 24px;
-    background: #3b82f6;
-    color: #fff;
+    padding: 13px 28px;
+    background: var(--accent);
+    color: white;
     text-decoration: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-weight: 600;
+    font-size: 0.95rem;
+    transition: background .15s ease;
   }
-  a:hover {
-    background: #2563eb;
+
+  a.btn:hover {
+    background: #3a8ad4;
+  }
+
+  .link-fallback {
+    margin-top: 18px;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,.4);
+    word-break: break-all;
   }
 </style>
 </head>
 <body>
   <div class="card">
-    <h1>Сайт переехал</h1>
-    <p>Конструктор теперь находится по новому адресу. Если переадресация не сработала автоматически — перейдите по ссылке ниже.</p>
-    <a href="http://lingidan.konstruktor.website.yandexcloud.net/">Перейти на новый сайт</a>
+    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#ffffff" opacity=".1"/>
+      <path d="M10 7h8.5L23 11.5V25H10V7z" fill="white"/>
+      <path d="M18.5 7v4.5H23" fill="none" stroke="#1a3a5c" stroke-width="1.2"/>
+      <path d="M13 16.5l2 2 4-4" stroke="#1a3a5c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <h1>Конструктор переехал на новый адрес</h1>
+    <p>Мы обновили расположение сайта. Нажмите кнопку ниже, чтобы перейти к работе.</p>
+    <a class="btn" href="http://lingidan.konstruktor.website.yandexcloud.net/">Перейти на сайт</a>
+    <div class="link-fallback">http://lingidan.konstruktor.website.yandexcloud.net/</div>
   </div>
 </body>
 </html>
