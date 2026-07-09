@@ -1006,7 +1006,7 @@
   /* ── Окно «Настройки ППРв» (админ) — ширина как у карточки блока ── */
   #pprvSettingsOverlay {
     display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.4); z-index: 800;
+    background: rgba(0,0,0,.4); z-index: 700;
     justify-content: center; align-items: center; padding: 20px;
   }
   #pprvSettingsOverlay.open { display: flex; }
@@ -1429,7 +1429,7 @@
 </div>
 
 <!-- Окно «Настройки ППРв» (тестовая функция — админ) -->
-<div id="pprvSettingsOverlay" onclick="pprvSettingsOverlayClick(event)">
+<div id="pprvSettingsOverlay">
   <div id="pprvSettingsModal">
     <div class="ipm-header">
       <div>
@@ -1571,7 +1571,7 @@
 </div>
 
 <!-- Модальное окно Подтверждения выхода -->
-<div id="logoutOverlay" onclick="if(event.target===this)closeLogoutConfirm()"
+<div id="logoutOverlay"
      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:960;justify-content:center;align-items:center;">
   <div style="background:var(--surface);width:320px;max-width:calc(100vw - 32px);border-radius:14px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.25);">
     <div style="background:var(--navy);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;">
@@ -1773,7 +1773,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.81</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.83</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1984,13 +1984,13 @@
           <label>Утвердил ППРв <span style="font-weight:400; color:var(--gray-400, #94a3b8); font-size:12px">(план производства работ на высоте)</span></label>
           <div style="display:flex;gap:6px;align-items:stretch">
             <input type="text" id="utvPprv" placeholder="Иванов Иван Иванович, главный инженер" style="flex:1;min-width:0">
-            <button class="issuer-pick-btn" type="button" onclick="openPprvPicker()" title="Выбрать из списка">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              Из списка
-            </button>
             <button class="issuer-pick-btn" type="button" id="btnPprvSettings" onclick="openPprvSettingsModal()" title="Настройки ППРв (тестовая функция — админ)" style="display:none">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
               Настройки
+            </button>
+            <button class="issuer-pick-btn" type="button" onclick="openPprvPicker()" title="Выбрать из списка">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Из списка
             </button>
           </div>
         </div>
@@ -3275,9 +3275,6 @@ function openPprvSettingsModal() {
 function closePprvSettingsModal() {
   document.getElementById('pprvSettingsOverlay').classList.remove('open');
 }
-function pprvSettingsOverlayClick(e) {
-  if (e.target === document.getElementById('pprvSettingsOverlay')) closePprvSettingsModal();
-}
 
 // Подгрузка настроек ППРв — отдельный запрос к серверу (см. Code.gs:
 // getOrgPersonnel эти столбцы не отдаёт, чтобы не грузить лишним весом всех
@@ -3416,7 +3413,6 @@ function closePprvOptionPicker() {
 }
 
 function pprvOptionPickerOverlayClick(e) {
-  if (e.target === document.getElementById('pprvOptionPickerOverlay')) closePprvOptionPicker();
 }
 
 function collectPprvSettingsData() {
@@ -3898,7 +3894,6 @@ function closeCrewPicker() {
 }
 
 function crewPickerOverlayClick(e) {
-  if (e.target === document.getElementById('crewPickerOverlay')) closeCrewPicker();
 }
 
 function _getExecFios() {
@@ -4123,7 +4118,6 @@ function closeIssuerPicker() {
   document.getElementById('issuerPickerOverlay').classList.remove('open');
 }
 function issuerPickerOverlayClick(e) {
-  if (e.target === document.getElementById('issuerPickerOverlay')) closeIssuerPicker();
 }
 
 function renderIssuerList() {
@@ -4201,7 +4195,6 @@ function closePprvPicker() {
   document.getElementById('pprvPickerOverlay').classList.remove('open');
 }
 function pprvPickerOverlayClick(e) {
-  if (e.target === document.getElementById('pprvPickerOverlay')) closePprvPicker();
 }
 
 function renderPprvList() {
@@ -4342,7 +4335,6 @@ function closeRukovPicker() {
   document.getElementById('rukovPickerOverlay').classList.remove('open');
 }
 function rukovPickerOverlayClick(e) {
-  if (e.target === document.getElementById('rukovPickerOverlay')) closeRukovPicker();
 }
 
 function renderRukovList() {
@@ -4479,7 +4471,6 @@ function closeOgnevoyUtvPicker() {
   document.getElementById('ognevoyUtvPickerOverlay').classList.remove('open');
 }
 function ognevoyUtvPickerOverlayClick(e) {
-  if (e.target === document.getElementById('ognevoyUtvPickerOverlay')) closeOgnevoyUtvPicker();
 }
 
 function renderOgnevoyUtvList() {
@@ -4615,7 +4606,6 @@ function closeOgnevoyRukovPicker() {
   document.getElementById('ognevoyRukovPickerOverlay').classList.remove('open');
 }
 function ognevoyRukovPickerOverlayClick(e) {
-  if (e.target === document.getElementById('ognevoyRukovPickerOverlay')) closeOgnevoyRukovPicker();
 }
 
 function renderOgnevoyRukovList() {
@@ -5823,7 +5813,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.81';
+const CURRENT_VERSION = 'v3.83';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -6479,7 +6469,6 @@ function closeSettings() {
   document.body.style.overflow = '';
 }
 function overlayClick(e) {
-  if (e.target === document.getElementById('settingsOverlay')) closeSettings();
 }
 
 const STORAGE_KEY = 'narad_form_v1';
@@ -8294,6 +8283,20 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.83', date: '09.07.2026',
+    changes: [
+      'Все окна-пикеры и модальные окна сайта теперь закрываются только по крестику — случайный клик мимо окна больше их не закрывает',
+    ]
+  },
+  {
+    version: 'v3.82', date: '09.07.2026',
+    changes: [
+      'Окно «Настройки ППРв» теперь закрывается только по крестику, а не по клику мимо',
+      'Исправлено наложение окон: пикер вариантов внутри настроек ППРв больше не открывается под окном настроек',
+      'Кнопки «Настройки» и «Из списка» у поля «Утвердил ППРв» поменяны местами',
+    ]
+  },
   {
     version: 'v3.81', date: '09.07.2026',
     changes: [
@@ -10172,7 +10175,6 @@ function closeGuide() {
 }
 
 function guideOverlayClick(e) {
-  if (e.target === document.getElementById('guideOverlay')) closeGuide();
 }
 
 function _guideKeyDown(e) {
@@ -11300,7 +11302,7 @@ function copyDevEmail() {
 </style>
 
 <!-- ── Модалка: данные сотрудников не предоставлены ── -->
-<div id="noEmployeeDataModal" style="display:none;position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.5);display:none" onclick="if(event.target===this)closeNoEmployeeDataModal()">
+<div id="noEmployeeDataModal" style="display:none;position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.5);display:none">
   <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.3);width:400px;max-width:92vw;overflow:hidden">
     <div style="background:var(--navy);color:white;padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
       <span style="font-weight:700;font-size:14px">База сотрудников недоступна</span>
@@ -11330,7 +11332,7 @@ function copyDevEmail() {
 </div>
 
 <!-- ── PPR Picker Modal ── -->
-<div id="pprPickerOverlay" style="display:none;position:fixed;inset:0;z-index:9750;background:rgba(0,0,0,.5)" onclick="if(event.target===this)closePprPicker()">
+<div id="pprPickerOverlay" style="display:none;position:fixed;inset:0;z-index:9750;background:rgba(0,0,0,.5)">
   <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.35);width:460px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
     <div style="background:var(--navy);color:white;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <span style="font-weight:700;font-size:14px">Выбор ППР из реестра</span>
@@ -11359,7 +11361,7 @@ function copyDevEmail() {
 </div>
 
 <!-- ── Room List Popup (новый пикер помещений без плана) ── -->
-<div id="roomListPopup" style="display:none;position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.5)" onclick="if(event.target===this)closeRoomListPopup()">
+<div id="roomListPopup" style="display:none;position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.5)">
   <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.35);width:440px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
     <div style="background:var(--navy);color:white;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <span style="font-weight:700;font-size:14px">Выбор помещений</span>
@@ -11385,7 +11387,7 @@ function copyDevEmail() {
 </div>
 
 <!-- ── Work Type Picker Popup ── -->
-<div id="workTypePopup" style="display:none;position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.5)" onclick="if(event.target===this)closeWorkTypePicker()">
+<div id="workTypePopup" style="display:none;position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.5)">
   <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.35);width:440px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
     <div style="background:var(--navy);color:white;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <div style="display:flex;gap:4px">
