@@ -1003,6 +1003,21 @@
     display: flex; flex-direction: column; max-height: calc(100vh - 100px); overflow: hidden;
   }
 
+  /* ── Окно «Настройки ППРв» (админ) — ширина как у карточки блока ── */
+  #pprvSettingsOverlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.4); z-index: 800;
+    justify-content: center; align-items: center; padding: 20px;
+  }
+  #pprvSettingsOverlay.open { display: flex; }
+  #pprvSettingsModal {
+    background: var(--surface); width: 960px; max-width: 100%;
+    border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,.22);
+    display: flex; flex-direction: column; max-height: calc(100vh - 60px); overflow: hidden;
+  }
+  #pprvSettingsModal .ipm-header p { color: white; opacity: .65; font-size: 11.5px; margin: 2px 0 0; }
+  #pprvSettingsBody { overflow-y: auto; padding: 16px 20px; }
+
   /* ── Автодополнение исполнителей (ФИО ячейка) ── */
   #execAcList {
     position: fixed; z-index: 600; display: none;
@@ -1413,6 +1428,22 @@
   </div>
 </div>
 
+<!-- Окно «Настройки ППРв» (тестовая функция — админ) -->
+<div id="pprvSettingsOverlay" onclick="pprvSettingsOverlayClick(event)">
+  <div id="pprvSettingsModal">
+    <div class="ipm-header">
+      <div>
+        <h3>Настройки ППРв</h3>
+        <p>Тестовая функция — видна только администратору</p>
+      </div>
+      <button class="ipm-close" onclick="closePprvSettingsModal()">×</button>
+    </div>
+    <div id="pprvSettingsBody">
+      <div id="pprvSettingsFields"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Пикер утвердившего огневой наряд -->
 <div id="ognevoyUtvPickerOverlay" onclick="ognevoyUtvPickerOverlayClick(event)">
   <div id="ognevoyUtvPickerModal">
@@ -1742,7 +1773,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.80</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.81</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -1957,20 +1988,9 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               Из списка
             </button>
-          </div>
-        </div>
-
-        <div class="field col-span-2" id="pprvSettingsBlock" style="display:none">
-          <div id="pprvSettingsHeader" onclick="togglePprvSettingsBlock()" style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;padding:10px 14px;background:var(--gray-100,#f1f5f9);border:1.5px solid var(--gray-200);border-radius:var(--radius)">
-            <span id="pprvSettingsArrow" style="transition:transform .15s;display:inline-block">▸</span>
-            <span style="font-weight:600;font-size:14px">Настройки ППРв</span>
-            <span style="font-weight:400;color:var(--gray-400,#94a3b8);font-size:12px">(тестовая функция — админ)</span>
-          </div>
-          <div id="pprvSettingsBody" style="display:none;padding:14px 2px 2px">
-            <div id="pprvSettingsFields"></div>
-            <button type="button" class="issuer-pick-btn" onclick="togglePprvSettingsBlock()" style="width:auto;padding:0 16px;margin-top:4px">
-              <span style="display:inline-block;transform:rotate(180deg)">▸</span>
-              Свернуть
+            <button class="issuer-pick-btn" type="button" id="btnPprvSettings" onclick="openPprvSettingsModal()" title="Настройки ППРв (тестовая функция — админ)" style="display:none">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Настройки
             </button>
           </div>
         </div>
@@ -3225,9 +3245,9 @@ function _showAdminBtn() {
     if (!isAdmin && _naryadType === 'ozp') switchNaryadType('general');
   }
 
-  // Блок «Настройки ППРв» — тестовая функция, видна только администратору
-  const pprvBlock = document.getElementById('pprvSettingsBlock');
-  if (pprvBlock) pprvBlock.style.display = isAdmin ? '' : 'none';
+  // Кнопка «Настройки ППРв» — тестовая функция, видна только администратору
+  const btnPprvSet = document.getElementById('btnPprvSettings');
+  if (btnPprvSet) btnPprvSet.style.display = isAdmin ? '' : 'none';
 
   // Огневой наряд формируется на отдельной вкладке «Огневой» —
   // старая кнопка/поле на общестроительном листе для него больше не нужны.
@@ -3248,21 +3268,21 @@ function _compensateScroll(el, mutate) {
   if (delta) window.scrollBy(0, delta);
 }
 
-function togglePprvSettingsBlock() {
-  const body  = document.getElementById('pprvSettingsBody');
-  const arrow = document.getElementById('pprvSettingsArrow');
-  if (!body) return;
-  const open = body.style.display !== 'none';
-  _compensateScroll(body, () => {
-    body.style.display = open ? 'none' : '';
-  });
-  if (arrow) arrow.style.transform = open ? '' : 'rotate(90deg)';
-  if (!open) loadPprvSettingsIfNeeded();
+function openPprvSettingsModal() {
+  document.getElementById('pprvSettingsOverlay').classList.add('open');
+  loadPprvSettingsIfNeeded();
+}
+function closePprvSettingsModal() {
+  document.getElementById('pprvSettingsOverlay').classList.remove('open');
+}
+function pprvSettingsOverlayClick(e) {
+  if (e.target === document.getElementById('pprvSettingsOverlay')) closePprvSettingsModal();
 }
 
-// Ленивая подгрузка настроек ППРв — отдельный запрос к серверу, дергается
-// только когда админ реально открывает блок, а не при каждой загрузке сайта
-// для всех пользователей (см. Code.gs: getOrgPersonnel эти столбцы не отдаёт).
+// Подгрузка настроек ППРв — отдельный запрос к серверу (см. Code.gs:
+// getOrgPersonnel эти столбцы не отдаёт, чтобы не грузить лишним весом всех
+// пользователей). Для админа запускается автоматически вместе с остальными
+// данными организации в loadOrgPersonnel(), а не по клику — см. вызов ниже.
 async function loadPprvSettingsIfNeeded() {
   if (_pprvSettingsStatus === 'ready' || _pprvSettingsStatus === 'loading') return;
   if (!currentUser) return;
@@ -4868,13 +4888,15 @@ function loadOrgPersonnel() {
         }
       }
 
-      // Настройки ППРв (столбцы «ППРв - ...») сюда больше не входят — сервер их
-      // не отдаёт в getOrgPersonnel (см. Code.gs), чтобы не грузить лишним весом
-      // каждую первую загрузку сайта для всех пользователей. Они подгружаются
-      // отдельно и лениво в loadPprvSettingsIfNeeded(), только когда админ
-      // открывает блок «Настройки ППРв».
+      // Настройки ППРв (столбцы «ППРв - ...») сюда не входят — сервер их не
+      // отдаёт в getOrgPersonnel (см. Code.gs), чтобы не грузить лишним весом
+      // каждую первую загрузку сайта для всех пользователей. Подгружаются
+      // отдельным запросом, но для админа — сразу здесь же, вместе с
+      // остальными данными организации, а не по клику на кнопку «Настройки».
       _pprvSettingsStatus = 'idle';
       orgPprvSettings = [];
+      const _isAdminUser = currentUser && (currentUser.login || '').toLowerCase() === 'лингидан';
+      if (_isAdminUser) loadPprvSettingsIfNeeded();
 
       // Определить участок текущего пользователя
       if (currentUser) {
@@ -5801,7 +5823,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.80';
+const CURRENT_VERSION = 'v3.81';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -8272,6 +8294,13 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.81', date: '09.07.2026',
+    changes: [
+      'Настройки ППРв теперь открываются отдельным окном по кнопке рядом с полем «Утвердил ППРв», а не раскрывающимся списком',
+      'Для администратора настройки ППРв подгружаются сразу при входе вместе с остальными данными организации',
+    ]
+  },
   {
     version: 'v3.80', date: '08.07.2026',
     changes: [
