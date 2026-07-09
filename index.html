@@ -1773,7 +1773,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.83</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.84</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -5660,16 +5660,29 @@ async function buildPPRVDocument(data) {
     const val = found ? pprvSet[found] : '';
     return val || fallback;
   }
+  // Привязи и стропы задаются в реестре организации двумя раздельными
+  // колонками — «... обычные» и «... огнеупорные» (см. пикер настроек ППРв).
+  // Обычный вариант выводится всегда, огнеупорный добавляется вторым
+  // пунктом через запятую только если в бригаде есть сварщик (hasWelder).
+  function pprvValWelder(baseSubstr, isWelder, fallbackNormal, fallbackFire) {
+    const keys = Object.keys(pprvSet);
+    const foundNormal  = keys.find(k => k.includes(baseSubstr) && k.includes('обычн'));
+    const foundFire    = keys.find(k => k.includes(baseSubstr) && k.includes('огнеупор'));
+    const foundGeneric = keys.find(k => k.includes(baseSubstr) && !k.includes('обычн') && !k.includes('огнеупор'));
+    const normalVal = (foundNormal && pprvSet[foundNormal]) || (foundGeneric && pprvSet[foundGeneric]) || fallbackNormal;
+    const fireVal = (foundFire && pprvSet[foundFire]) || fallbackFire;
+    return isWelder ? [normalVal, fireVal].filter(Boolean).join(', ') : normalVal;
+  }
 
   const execLead = (data.executors[0] && data.executors[0].fio) || '';
   const execLeadDolzh = (data.executors[0] && data.executors[0].dolzh) || '';
   const hasWelder = data.executors.some(e => /электрогазосварщик|электросварщик/i.test(e.dolzh || ''));
-  const privyaz = hasWelder
-    ? 'Страховочная привязь «Safe-Tec-St-5», Страховочная привязь «Safe-Tec-St-5 Огнеупорная»'
-    : 'Страховочная привязь «Safe-Tec-St-5»';
-  const strop = hasWelder
-    ? 'Строп двухветвевой Safe-Tec LAS212 (либо аналог), Строп двухветвевой огнеупорный Safe-Tec ABF 212 (либо аналог)'
-    : 'Строп двухветвевой Safe-Tec LAS212 (либо аналог)';
+  const privyaz = pprvValWelder('привязи', hasWelder,
+    'Страховочная привязь «Safe-Tec-St-5»',
+    'Страховочная привязь «Safe-Tec-St-5 Огнеупорная»');
+  const strop = pprvValWelder('стропов', hasWelder,
+    'Строп двухветвевой Safe-Tec LAS212 (либо аналог)',
+    'Строп двухветвевой огнеупорный Safe-Tec ABF 212 (либо аналог)');
 
   // "Требования к исполнителям" — группировка по должности и группе по высоте
   // Сотрудники с группой высоты = 0 исключаются из требований и из ознакомления
@@ -5697,8 +5710,8 @@ async function buildPPRVDocument(data) {
       infoRow('Требования к исполнителям:', trebLines),
       subHeaderRow('Системы обеспечения безопасности работ на высоте:'),
       infoRow('Анкерные устройства:', pprvVal('анкерные устройств', 'Надежные металлоконструкции')),
-      infoRow('Привязи:', pprvVal('привязи', privyaz)),
-      infoRow('Вид стропов:', pprvVal('вид стропов', strop)),
+      infoRow('Привязи:', privyaz),
+      infoRow('Вид стропов:', strop),
       subHeaderRow('Необходимо оградить:-'),
       infoRow('Сигнальные ограждения:', pprvVal('сигнальные огражд', 'выгородить рабочую зону сигнальной лентой')),
       infoRow('Защитные ограждения:', pprvVal('защитные огражд', 'Не требуются')),
@@ -5813,7 +5826,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.83';
+const CURRENT_VERSION = 'v3.84';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -8283,6 +8296,12 @@ async function buildOgnevoySheetDoc(data) {
 
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
+  {
+    version: 'v3.84', date: '09.07.2026',
+    changes: [
+      'Исправлен выбор привязей и стропов в ППРв при раздельных колонках «обычные/огнеупорные» в реестре организации — теперь огнеупорный вариант подставляется вместе с обычным только если в бригаде есть сварщик, а не берётся наугад',
+    ]
+  },
   {
     version: 'v3.83', date: '09.07.2026',
     changes: [
