@@ -1773,7 +1773,7 @@
     <p>Форма заполнения разрешительной документации на опасные работы</p>
   </div>
   <div style="font-size:12px; color:var(--gray-400); text-align:right; white-space:nowrap">
-    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.84</div>
+    <div style="font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px">v3.87</div>
     Разработал<br>Лингидан Максим Дмитриевич
   </div>
 </div>
@@ -2825,7 +2825,7 @@ let allEmployeesList = []; // [{fio, dolzh, razr, grEB, grVys, ppu}] — все 
 let receiversList = [];    // [{fio, dolzh, ppu}] — те, за кого Оператор может оформлять наряд ("полнд" в столбце «Рабочие обозначения»)
 let pprvApproversList = []; // [{fio, dolzh}] — те, кто утверждает ППРв ("ппрв" в столбце «Рабочие обозначения»)
 let orgPprData = [];       // [{blok, obj, nom, hdr}] — реестр ППР
-let _pprSelectedNom = null; // текущий выбранный номер ППР в пикере
+let _pprSelectedNoms = new Set(); // выбранные номера ППР в пикере (мультивыбор)
 let orgPprvSettings = [];  // [{key, label, type:'text'|'checkbox', defaultText, options, defaultVals}] — настройки ППРв из колонок «ППРв - ...»
 let _pprvSettingsStatus = 'idle'; // 'idle' | 'loading' | 'ready' | 'error' — ленивая подгрузка настроек ППРв (только для админа)
 
@@ -3911,22 +3911,30 @@ function renderCrewList() {
   const ppuF  = document.getElementById('crewPpuFilter').value;
   const q     = (document.getElementById('crewSearch').value || '').trim().toLowerCase();
   const dups  = _getExecFios();
+  const favs  = crewFavs();
 
-  let items = allEmployeesList.filter(p => {
-    if (ppuF && p.ppu !== ppuF) return false;
-    if (q && !p.fio.toLowerCase().includes(q)) return false;
-    return true;
-  });
+  const matchesSearch = p => !q || p.fio.toLowerCase().includes(q);
+  const matchesPpu    = p => !ppuF || p.ppu === ppuF;
 
-  if (!items.length) {
+  // избранные показываются всегда, независимо от фильтра по ППУ
+  const favItems  = allEmployeesList.filter(p => favs.includes(p.fio) && matchesSearch(p));
+  const favFioSet = new Set(favItems.map(p => p.fio));
+
+  // отмеченные (выбранные), которые не проходят текущий фильтр по ППУ — тоже не скрываем
+  const pinnedSelItems = allEmployeesList.filter(p =>
+    _crewPickerSel.has(p.fio) && !favFioSet.has(p.fio) && matchesSearch(p) && !matchesPpu(p)
+  );
+  const pinnedFioSet = new Set(pinnedSelItems.map(p => p.fio));
+
+  const otherItems = allEmployeesList.filter(p =>
+    !favFioSet.has(p.fio) && !pinnedFioSet.has(p.fio) && matchesPpu(p) && matchesSearch(p)
+  );
+
+  if (!favItems.length && !pinnedSelItems.length && !otherItems.length) {
     list.innerHTML = `<div class="cpm-empty">Нет сотрудников по выбранному фильтру</div>`;
     _updateCrewFooter();
     return;
   }
-
-  const favs = crewFavs();
-  const favItems   = items.filter(p => favs.includes(p.fio));
-  const otherItems = items.filter(p => !favs.includes(p.fio));
 
   function crewItemHtml(p) {
     const isDup  = dups.has(p.fio.toLowerCase());
@@ -3952,8 +3960,12 @@ function renderCrewList() {
     html += `<div class="cpm-section-label">⭐ Избранные</div>`;
     favItems.forEach(p => { html += crewItemHtml(p); });
   }
+  if (pinnedSelItems.length) {
+    html += `<div class="cpm-section-label">Отмечено (вне текущего фильтра)</div>`;
+    pinnedSelItems.forEach(p => { html += crewItemHtml(p); });
+  }
   if (otherItems.length) {
-    if (favItems.length) html += `<div class="cpm-section-label">Все</div>`;
+    if (favItems.length || pinnedSelItems.length) html += `<div class="cpm-section-label">Все</div>`;
     // группировка по первой букве
     let lastLetter = '';
     otherItems.forEach(p => {
@@ -4125,9 +4137,9 @@ function renderIssuerList() {
   const ppuF  = document.getElementById('issuerPpuFilter').value;
   const favs  = issuerFavs();
 
-  let items = issuersList.filter(p => !ppuF || p.ppu === ppuF);
-  const favItems   = items.filter(p => favs.includes(p.fio));
-  const otherItems = items.filter(p => !favs.includes(p.fio));
+  const favItems   = issuersList.filter(p => favs.includes(p.fio));
+  const favFioSet  = new Set(favItems.map(p => p.fio));
+  const otherItems = issuersList.filter(p => !favFioSet.has(p.fio) && (!ppuF || p.ppu === ppuF));
 
   let html = '';
   if (favItems.length) {
@@ -4138,7 +4150,7 @@ function renderIssuerList() {
     if (favItems.length) html += `<div class="ipm-section-label">Все</div>`;
     otherItems.forEach(p => { html += issuerItemHtml(p, false); });
   }
-  if (!items.length) html = `<div class="ipm-empty">Нет сотрудников с правом выдачи наряда</div>`;
+  if (!favItems.length && !otherItems.length) html = `<div class="ipm-empty">Нет сотрудников с правом выдачи наряда</div>`;
   list.innerHTML = html;
 }
 
@@ -4342,9 +4354,9 @@ function renderRukovList() {
   const ppuF = document.getElementById('rukovPpuFilter').value;
   const favs = rukovFavs();
 
-  let items = receiversList.filter(p => !ppuF || p.ppu === ppuF);
-  const favItems   = items.filter(p => favs.includes(p.fio));
-  const otherItems = items.filter(p => !favs.includes(p.fio));
+  const favItems   = receiversList.filter(p => favs.includes(p.fio));
+  const favFioSet  = new Set(favItems.map(p => p.fio));
+  const otherItems = receiversList.filter(p => !favFioSet.has(p.fio) && (!ppuF || p.ppu === ppuF));
 
   let html = '';
   if (favItems.length) {
@@ -4355,7 +4367,7 @@ function renderRukovList() {
     if (favItems.length) html += `<div class="ipm-section-label">Все</div>`;
     otherItems.forEach(p => { html += rukovItemHtml(p, false); });
   }
-  if (!items.length) html = `<div class="ipm-empty">Нет сотрудников, доступных для выбора</div>`;
+  if (!favItems.length && !otherItems.length) html = `<div class="ipm-empty">Нет сотрудников, доступных для выбора</div>`;
   list.innerHTML = html;
 }
 
@@ -4478,9 +4490,9 @@ function renderOgnevoyUtvList() {
   const ppuF = document.getElementById('ognevoyUtvPpuFilter').value;
   const favs = ognevoyUtvFavs();
 
-  let items = issuersList.filter(p => !ppuF || p.ppu === ppuF);
-  const favItems   = items.filter(p => favs.includes(p.fio));
-  const otherItems = items.filter(p => !favs.includes(p.fio));
+  const favItems   = issuersList.filter(p => favs.includes(p.fio));
+  const favFioSet  = new Set(favItems.map(p => p.fio));
+  const otherItems = issuersList.filter(p => !favFioSet.has(p.fio) && (!ppuF || p.ppu === ppuF));
 
   let html = '';
   if (favItems.length) {
@@ -4491,7 +4503,7 @@ function renderOgnevoyUtvList() {
     if (favItems.length) html += `<div class="ipm-section-label">Все</div>`;
     otherItems.forEach(p => { html += ognevoyUtvItemHtml(p, false); });
   }
-  if (!items.length) html = `<div class="ipm-empty">Нет сотрудников с правом выдачи наряда</div>`;
+  if (!favItems.length && !otherItems.length) html = `<div class="ipm-empty">Нет сотрудников с правом выдачи наряда</div>`;
   list.innerHTML = html;
 }
 
@@ -4613,9 +4625,9 @@ function renderOgnevoyRukovList() {
   const ppuF = document.getElementById('ognevoyRukovPpuFilter').value;
   const favs = ognevoyRukovFavs();
 
-  let items = receiversList.filter(p => !ppuF || p.ppu === ppuF);
-  const favItems   = items.filter(p => favs.includes(p.fio));
-  const otherItems = items.filter(p => !favs.includes(p.fio));
+  const favItems   = receiversList.filter(p => favs.includes(p.fio));
+  const favFioSet  = new Set(favItems.map(p => p.fio));
+  const otherItems = receiversList.filter(p => !favFioSet.has(p.fio) && (!ppuF || p.ppu === ppuF));
 
   let html = '';
   if (favItems.length) {
@@ -4626,7 +4638,7 @@ function renderOgnevoyRukovList() {
     if (favItems.length) html += `<div class="ipm-section-label">Все</div>`;
     otherItems.forEach(p => { html += ognevoyRukovItemHtml(p, false); });
   }
-  if (!items.length) html = `<div class="ipm-empty">Нет сотрудников, доступных для выбора</div>`;
+  if (!favItems.length && !otherItems.length) html = `<div class="ipm-empty">Нет сотрудников, доступных для выбора</div>`;
   list.innerHTML = html;
 }
 
@@ -5826,7 +5838,7 @@ async function buildPPRVDocument(data) {
 }
 
 // ─── Проверка актуальности версии ─────────────────────────────────────────
-const CURRENT_VERSION = 'v3.84';
+const CURRENT_VERSION = 'v3.87';
 const VERSION_CHECK_TTL = 5 * 60 * 1000; // 5 минут
 let _versionCheckTime = null;
 let _versionCheckPassed = false;
@@ -8297,6 +8309,25 @@ async function buildOgnevoySheetDoc(data) {
 // ─── История обновлений ───────────────────────────────────────────────────
 const CHANGELOG = [
   {
+    version: 'v3.87', date: '09.07.2026',
+    changes: [
+      'Во всех пикерах с избранным (ППР, бригада, выдавший наряд, руководитель работ, огневой) избранные записи теперь видны всегда, даже если не подходят под текущий фильтр по участку/блоку',
+      'В пикере бригады уже отмеченные сотрудники больше не пропадают из вида при смене фильтра',
+    ]
+  },
+  {
+    version: 'v3.86', date: '09.07.2026',
+    changes: [
+      'В окне выбора ППР теперь можно выбрать сразу несколько документов — они подставятся в поле через запятую',
+    ]
+  },
+  {
+    version: 'v3.85', date: '09.07.2026',
+    changes: [
+      'В окне выбора ППР из реестра теперь автоматически подставляется блок «2», если он есть в списке',
+    ]
+  },
+  {
     version: 'v3.84', date: '09.07.2026',
     changes: [
       'Исправлен выбор привязей и стропов в ППРв при раздельных колонках «обычные/огнеупорные» в реестре организации — теперь огнеупорный вариант подставляется вместе с обычным только если в бригаде есть сварщик, а не берётся наугад',
@@ -10356,7 +10387,7 @@ function openPprPicker(_fromRetry) {
     alert('Реестр ППР не заполнен. Добавьте колонки «ППР - блок», «ППР - объект», «ППР - номер» в таблицу организации.');
     return;
   }
-  _pprSelectedNom = null;
+  _pprSelectedNoms = new Set();
   document.getElementById('pprPickerOverlay').style.display = 'block';
   document.body.style.overflow = 'hidden';
   const bloks = [...new Set(orgPprData.map(p => p.blok))].sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
@@ -10364,8 +10395,13 @@ function openPprPicker(_fromRetry) {
   blokSel.innerHTML = '<option value="">Блок</option>' + bloks.map(b => `<option value="${b}">${b}</option>`).join('');
   document.getElementById('pprObjSel').innerHTML = '<option value="">Объект</option>';
   document.getElementById('pprSearch').value = '';
-  _pprRenderList([]);
-  _pprUpdateBottom();
+  if (bloks.includes('2')) {
+    blokSel.value = '2';
+    pprFillObjects();
+  } else {
+    _pprRenderList([]);
+    _pprUpdateBottom();
+  }
 }
 
 function closePprPicker() {
@@ -10379,7 +10415,6 @@ function pprFillObjects() {
   document.getElementById('pprObjSel').innerHTML = '<option value="">Объект</option>' + objs.map(o => `<option value="${o}">${o}</option>`).join('');
   document.getElementById('pprSearch').value = '';
   _pprRenderList([]);
-  _pprSelectedNom = null;
   _pprUpdateBottom();
 }
 
@@ -10389,7 +10424,6 @@ function pprFillNumbers() {
   const obj  = document.getElementById('pprObjSel').value;
   const items = (blok && obj) ? orgPprData.filter(p => p.blok === blok && p.obj === obj) : [];
   _pprRenderList(items);
-  _pprSelectedNom = null;
   _pprUpdateBottom();
 }
 
@@ -10415,62 +10449,88 @@ function pprToggleFav(btn, nom) {
   if (favs.has(nom)) { favs.delete(nom); } else { favs.add(nom); }
   _pprFavSave(favs);
   pprFilterList(document.getElementById('pprSearch').value);
-  if (_pprSelectedNom) {
-    const el = document.querySelector(`#pprNomList .ppr-nom-item[data-nom="${CSS.escape(_pprSelectedNom)}"]`);
-    if (el) pprSelectItem(el);
-  }
 }
 
 function _pprRenderList(items) {
   const list = document.getElementById('pprNomList');
-  if (!document.getElementById('pprBlokSel').value || !document.getElementById('pprObjSel').value) {
-    list.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--gray-400);font-size:13px">Выберите блок и объект</div>';
-    return;
-  }
-  if (!items.length) {
-    list.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--gray-400);font-size:13px">Нет записей</div>';
-    return;
-  }
+  const q = (document.getElementById('pprSearch').value || '').trim().toLowerCase();
+  const matchesSearch = p => !q || (p.nom + ' ' + (p.hdr||'')).toLowerCase().includes(q);
   const favs = _pprFavLoad();
-  const favItems  = items.filter(p => favs.has(p.nom));
-  const restItems = items.filter(p => !favs.has(p.nom));
-  const makeItem = (p, isFav) => `
+
+  // уникальные записи по номеру ППР (для избранного/отмеченных вне текущего фильтра блок/объект)
+  const byNom = new Map();
+  orgPprData.forEach(p => { if (!byNom.has(p.nom)) byNom.set(p.nom, p); });
+  const allUnique = [...byNom.values()];
+  const itemsNomSet = new Set(items.map(p => p.nom));
+
+  const favItems = allUnique.filter(p => favs.has(p.nom) && matchesSearch(p));
+  const favNomSet = new Set(favItems.map(p => p.nom));
+
+  const pinnedSelItems = allUnique.filter(p => _pprSelectedNoms.has(p.nom) && !favNomSet.has(p.nom) && !itemsNomSet.has(p.nom) && matchesSearch(p));
+  const pinnedNomSet = new Set(pinnedSelItems.map(p => p.nom));
+
+  const restItems = items.filter(p => !favNomSet.has(p.nom) && !pinnedNomSet.has(p.nom));
+
+  const blokChosen = document.getElementById('pprBlokSel').value && document.getElementById('pprObjSel').value;
+
+  if (!favItems.length && !pinnedSelItems.length) {
+    if (!blokChosen) {
+      list.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--gray-400);font-size:13px">Выберите блок и объект</div>';
+      return;
+    }
+    if (!restItems.length) {
+      list.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--gray-400);font-size:13px">Нет записей</div>';
+      return;
+    }
+  }
+
+  const makeItem = (p, isFav) => {
+    const sel = _pprSelectedNoms.has(p.nom);
+    return `
     <div class="ppr-nom-item" data-nom="${_esc(p.nom)}" data-hdr="${_esc(p.hdr||'')}"
          onclick="pprSelectItem(this)"
-         style="padding:9px 12px;cursor:pointer;border-radius:6px;margin:2px 0;display:flex;align-items:flex-start;gap:6px;transition:background .12s">
+         style="padding:9px 12px;cursor:pointer;border-radius:6px;margin:2px 0;display:flex;align-items:flex-start;gap:6px;transition:background .12s;background:${sel?'var(--accent-light)':''}">
+      <span style="flex-shrink:0;width:16px;height:16px;margin-top:1px;border-radius:4px;border:1.5px solid ${sel?'var(--accent)':'var(--gray-400)'};background:${sel?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">${sel?'✓':''}</span>
       <div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0">
-        <span style="font-size:13px;font-weight:600;color:var(--text)">${_esc(p.nom)}</span>
+        <span style="font-size:13px;font-weight:600;color:${sel?'var(--accent)':'var(--text)'}">${_esc(p.nom)}</span>
         ${p.hdr ? `<span style="font-size:11px;color:var(--gray-400)">${_esc(p.hdr)}</span>` : ''}
       </div>
       <button type="button" onclick="pprToggleFav(this,'${_esc(p.nom)}')" title="${isFav?'Убрать из избранного':'Добавить в избранное'}"
         style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;flex-shrink:0;color:${isFav?'#f5a623':'var(--gray-400)'};margin-top:1px">${isFav?'★':'☆'}</button>
     </div>`;
+  };
+  const sectionLabel = (text, withBorder) => `<div style="padding:${withBorder?'6px':'4px'} 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em${withBorder?';border-top:1px solid var(--border);margin-top:4px':''}">${text}</div>`;
   let html = '';
   if (favItems.length) {
-    html += `<div style="padding:4px 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em">Избранные</div>`;
+    html += sectionLabel('Избранные', false);
     html += favItems.map(p => makeItem(p, true)).join('');
-    if (restItems.length) html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:4px">Все записи</div>`;
   }
-  html += restItems.map(p => makeItem(p, false)).join('');
+  if (pinnedSelItems.length) {
+    html += sectionLabel('Отмечено (вне текущего фильтра)', !!favItems.length);
+    html += pinnedSelItems.map(p => makeItem(p, favs.has(p.nom))).join('');
+  }
+  if (restItems.length) {
+    if (favItems.length || pinnedSelItems.length) html += sectionLabel('Все записи', true);
+    html += restItems.map(p => makeItem(p, false)).join('');
+  }
   list.innerHTML = html;
 }
 
 function pprSelectItem(el) {
-  _pprSelectedNom = el.dataset.nom || null;
-  const hdr = el.dataset.hdr || '';
-  document.querySelectorAll('#pprNomList .ppr-nom-item').forEach(item => {
-    const sel = item.dataset.nom === _pprSelectedNom;
-    item.style.background = sel ? 'var(--accent-light)' : '';
-    item.querySelector('span').style.color = sel ? 'var(--accent)' : 'var(--text)';
-  });
-  _pprUpdateBottom(_pprSelectedNom, hdr);
+  const nom = el.dataset.nom || '';
+  if (!nom) return;
+  if (_pprSelectedNoms.has(nom)) _pprSelectedNoms.delete(nom);
+  else _pprSelectedNoms.add(nom);
+  pprFilterList(document.getElementById('pprSearch').value);
+  _pprUpdateBottom();
 }
 
-function _pprUpdateBottom(nom, hdr) {
+function _pprUpdateBottom() {
   const hint = document.getElementById('pprSelectedHint');
   const btn  = document.getElementById('pprSaveBtn');
-  if (nom) {
-    hint.textContent = nom + (hdr ? ' — ' + hdr : '');
+  const n = _pprSelectedNoms.size;
+  if (n) {
+    hint.textContent = n === 1 ? [..._pprSelectedNoms][0] : `Выбрано: ${n}`;
     hint.style.color = 'var(--text)';
     btn.disabled = false; btn.style.opacity = '1';
   } else {
@@ -10481,9 +10541,9 @@ function _pprUpdateBottom(nom, hdr) {
 }
 
 function savePprPicker() {
-  if (!_pprSelectedNom) return;
+  if (!_pprSelectedNoms.size) return;
   const el = document.getElementById('ppr');
-  if (el) { el.value = _pprSelectedNom; el.dispatchEvent(new Event('input')); }
+  if (el) { el.value = [..._pprSelectedNoms].join(', '); el.dispatchEvent(new Event('input')); }
   closePprPicker();
 }
 
